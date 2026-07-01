@@ -134,11 +134,7 @@ async function loadNews() {
   try {
     const snap = await db.collection('news').orderBy('createdAt', 'desc').limit(20).get();
     if (snap.empty) {
-      feed.innerHTML = `<div class="news-card">
-        <h3 style="color:var(--accent)">Добре дошли във Виево банда! 🎉</h3>
-        <div class="news-meta">Администратор • ${new Date().toLocaleString('bg-BG')}</div>
-        <div class="news-content">Това е официалната общност за хората от Виево, Смолян. Тук можеш да играеш игри, да говориш в чата, да създаваш теми във форума и да гледаш предстоящи събития. Приятно прекарване! 🏔️</div>
-      </div>`;
+      feed.innerHTML = '<div class="news-placeholder">Все още няма новини.</div>';
       return;
     }
     feed.innerHTML = '';
