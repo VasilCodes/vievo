@@ -13,6 +13,11 @@ const db = firebase.firestore();
 
 let currentUser = null;
 let currentUserData = null;
+let currentThreadId = null;
+let currentThreadData = null;
+let currentConversationId = null;
+let dmUnsubscribe = null;
+let selectedSubTier = null;
 
 auth.onAuthStateChanged(async (user) => {
   if (!user) {
@@ -40,7 +45,7 @@ auth.onAuthStateChanged(async (user) => {
     updateUI();
     loadNews();
     loadForum();
-    loadChat();
+    loadConversations();
     loadEvents();
     loadLeaderboard();
     setupListeners();
@@ -181,79 +186,208 @@ async function loadForum() {
   }
 }
 
-function openThread(id, data) {
-  alert('Форум тема: ' + data.title + '\n\nДетайлите ще бъдат добавени в следваща версия.');
+window.openThread = async (id, data) => {
+  currentThreadId = id;
+  currentThreadData = data;
+  document.getElementById('forumThreadTitle').textContent = data.title;
+  document.getElementById('forumThreadTitle').style.color = data.authorColor || 'var(--text-primary)';
+  document.getElementById('forumThreadMeta').textContent = 'от ' + data.author + ' • ' + (data.replies || 0) + ' отговора';
+  document.getElementById('forumThreadContent').textContent = data.content;
+  document.getElementById('forumModal').classList.add('show');
+
+  const repliesContainer = document.getElementById('forumReplies');
+  repliesContainer.innerHTML = 'Зареждане...';
+  try {
+    const snap = await db.collection('forum').doc(id).collection('replies').orderBy('createdAt', 'asc').get();
+    repliesContainer.innerHTML = '';
+    if (snap.empty) {
+      repliesContainer.innerHTML = '<div style="color:var(--text-muted);font-size:0.88rem">Все още няма отговори.</div>';
+    } else {
+      snap.forEach(doc => {
+        const r = doc.data();
+        const div = document.createElement('div');
+        div.className = 'forum-reply';
+        const time = r.createdAt ? new Date(r.createdAt.toMillis()).toLocaleString('bg-BG') : '';
+        div.innerHTML = '<div class="reply-author" style="color:' + (r.authorColor || '#4caf50') + ';font-weight:600;font-size:0.85rem">' + r.author + ' <span style="color:var(--text-muted);font-weight:400;font-size:0.78rem">' + time + '</span></div><div style="margin-top:0.3rem;font-size:0.9rem;color:var(--text-secondary)">' + r.text + '</div>';
+        repliesContainer.appendChild(div);
+      });
+    }
+  } catch (err) {
+    repliesContainer.innerHTML = '<div style="color:var(--danger)">Грешка при зареждане на отговорите.</div>';
+    console.error(err);
+  }
+};
+
+window.closeForumModal = () => {
+  document.getElementById('forumModal').classList.remove('show');
+  currentThreadId = null;
+  currentThreadData = null;
+};
+
+async function loadConversations() {
+  const container = document.getElementById('conversationsList');
+  try {
+    const snap = await db.collection('conversations')
+      .where('participants', 'array-contains', currentUser.uid)
+      .orderBy('lastActivity', 'desc')
+      .get();
+
+    container.innerHTML = '';
+    if (snap.empty) {
+      container.innerHTML = '<div class="dm-placeholder">Няма разговори</div>';
+      return;
+    }
+
+    snap.forEach(doc => {
+      const conv = doc.data();
+      const otherUid = conv.participants.find(id => id !== currentUser.uid);
+      const partnerName = (conv.partnerNameFor && conv.partnerNameFor[currentUser.uid]) || conv.partnerName || 'Потребител';
+      const div = document.createElement('div');
+      div.className = 'dm-conv-item' + (doc.id === currentConversationId ? ' active' : '');
+      div.innerHTML = '<div class="dm-conv-name">' + partnerName + '</div><div class="dm-conv-preview">' + (conv.lastMessage || '') + '</div>';
+      div.onclick = () => openConversation(doc.id, otherUid, partnerName);
+      container.appendChild(div);
+    });
+  } catch (err) {
+    console.error(err);
+  }
 }
 
-async function loadChat() {
-  const messagesEl = document.getElementById('chatMessages');
-  const input = document.getElementById('chatInput');
-  const sendBtn = document.getElementById('chatSendBtn');
+async function openConversation(convId, otherUid, partnerName) {
+  currentConversationId = convId;
+  document.getElementById('dmPartnerName').textContent = partnerName;
+  document.getElementById('dmInputArea').style.display = 'flex';
+
+  document.querySelectorAll('.dm-conv-item').forEach(el => el.classList.remove('active'));
+  const items = document.querySelectorAll('.dm-conv-item');
+  for (let el of items) {
+    if (el.onclick && el.onclick.toString().includes(convId)) {
+      el.classList.add('active');
+      break;
+    }
+  }
+
+  if (dmUnsubscribe) dmUnsubscribe();
+
+  const messagesContainer = document.getElementById('dmMessages');
+  messagesContainer.innerHTML = 'Зареждане...';
 
   try {
-    const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
-    const snap = await db.collection('chat')
-      .where('createdAt', '>=', threeDaysAgo)
+    const snap = await db.collection('conversations').doc(convId).collection('messages')
       .orderBy('createdAt', 'asc')
       .limit(100)
       .get();
 
-    messagesEl.innerHTML = '';
+    messagesContainer.innerHTML = '';
     snap.forEach(doc => {
-      const m = doc.data();
-      appendChatMessage(m);
+      appendDmMessage(doc.data());
     });
-    messagesEl.scrollTop = messagesEl.scrollHeight;
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
   } catch (err) {
     console.error(err);
   }
 
-  db.collection('chat')
-    .where('createdAt', '>=', new Date(Date.now() - 3 * 24 * 60 * 60 * 1000))
+  dmUnsubscribe = db.collection('conversations').doc(convId).collection('messages')
     .orderBy('createdAt', 'asc')
     .onSnapshot((snap) => {
       snap.docChanges().forEach(change => {
         if (change.type === 'added') {
-          const m = change.doc.data();
-          appendChatMessage(m);
-          messagesEl.scrollTop = messagesEl.scrollHeight;
+          appendDmMessage(change.doc.data());
+          messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
       });
     });
+}
 
-  sendBtn.addEventListener('click', sendChatMessage);
-  input.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') sendChatMessage();
-  });
+function appendDmMessage(m) {
+  const div = document.createElement('div');
+  div.className = 'dm-msg' + (m.senderId === currentUser.uid ? ' dm-msg-own' : '');
+  const time = m.createdAt ? new Date(m.createdAt.toMillis()).toLocaleTimeString('bg-BG') : '';
+  div.innerHTML = '<div class="dm-msg-text">' + m.text + '</div><div class="dm-msg-time">' + time + '</div>';
+  document.getElementById('dmMessages').appendChild(div);
+}
 
-  async function sendChatMessage() {
-    const text = input.value.trim();
-    if (!text || !currentUser) return;
+async function sendDmMessage() {
+  const input = document.getElementById('dmInput');
+  const text = input.value.trim();
+  if (!text || !currentConversationId || !currentUser) return;
 
-    try {
-      await db.collection('chat').add({
-        userId: currentUser.uid,
-        author: currentUserData.username,
-        authorColor: currentUserData.nameColor || '#4caf50',
-        text: text,
+  try {
+    await db.collection('conversations').doc(currentConversationId).collection('messages').add({
+      senderId: currentUser.uid,
+      text: text,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    await db.collection('conversations').doc(currentConversationId).update({
+      lastMessage: text,
+      lastActivity: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    input.value = '';
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+window.searchDmUsers = async function() {
+  const query = document.getElementById('dmUserSearch').value.trim().toLowerCase();
+  const container = document.getElementById('dmUserResults');
+  if (query.length < 2) { container.innerHTML = ''; return; }
+
+  try {
+    const snap = await db.collection('users').where('approved', '==', true).get();
+    container.innerHTML = '';
+    snap.forEach(doc => {
+      const u = doc.data();
+      if (doc.id === currentUser.uid) return;
+      if (u.username.toLowerCase().includes(query)) {
+        const div = document.createElement('div');
+        div.className = 'dm-user-result';
+        div.innerHTML = '<span style="color:' + (u.nameColor || '#4caf50') + '">' + u.username + '</span>';
+        div.onclick = () => startConversation(doc.id, u.username);
+        container.appendChild(div);
+      }
+    });
+    if (container.innerHTML === '') {
+      container.innerHTML = '<div style="color:var(--text-muted);padding:0.5rem">Няма намерени потребители</div>';
+    }
+  } catch (err) {
+    console.error(err);
+  }
+};
+
+async function startConversation(otherUid, otherName) {
+  document.getElementById('newDmModal').classList.remove('show');
+  document.getElementById('dmUserSearch').value = '';
+  document.getElementById('dmUserResults').innerHTML = '';
+
+  const myUid = currentUser.uid;
+  const participants = [myUid, otherUid].sort();
+
+  try {
+    const snap = await db.collection('conversations')
+      .where('participants', '==', participants)
+      .get();
+
+    if (!snap.empty) {
+      openConversation(snap.docs[0].id, otherUid, otherName);
+    } else {
+      const ref = await db.collection('conversations').add({
+        participants: participants,
+        partnerName: otherName,
+        partnerId: otherUid,
+        lastMessage: '',
+        lastActivity: firebase.firestore.FieldValue.serverTimestamp(),
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
-      input.value = '';
-    } catch (err) {
-      console.error(err);
+      await db.collection('conversations').doc(ref.id).update({
+        ['partnerNameFor.' + myUid]: otherName,
+        ['partnerNameFor.' + otherUid]: currentUserData.username
+      });
+      openConversation(ref.id, otherUid, otherName);
     }
-  }
-
-  function appendChatMessage(m) {
-    const div = document.createElement('div');
-    div.className = 'chat-msg';
-    const time = m.createdAt ? new Date(m.createdAt.toMillis()).toLocaleTimeString('bg-BG') : '';
-    div.innerHTML = `
-      <div class="chat-author" style="color:${m.authorColor || '#4caf50'}">${m.author}</div>
-      ${m.text}
-      <span class="chat-time">${time}</span>
-    `;
-    messagesEl.appendChild(div);
+    loadConversations();
+  } catch (err) {
+    console.error(err);
   }
 }
 
@@ -367,10 +501,27 @@ function setupListeners() {
     }).then(() => loadForum()).catch(console.error);
   });
 
+  document.getElementById('newDmBtn').addEventListener('click', () => {
+    document.getElementById('newDmModal').classList.add('show');
+  });
+
+  document.getElementById('dmSendBtn').addEventListener('click', sendDmMessage);
+  document.getElementById('dmInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') sendDmMessage();
+  });
+
+  document.getElementById('forumReplyInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') document.getElementById('forumReplyBtn').click();
+  });
+
   document.querySelectorAll('.modal-overlay').forEach(el => {
     el.addEventListener('click', (e) => {
       if (e.target === el) el.classList.remove('show');
     });
+  });
+
+  document.getElementById('forumModal').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('forumModal')) closeForumModal();
   });
 
   setupColorPicker('settingsColorGrid', 'settingsNameColor');
@@ -432,7 +583,61 @@ function showSubModal() {
   const credits = { free: 10, plus: 15, pro: 25, ultra: 40 };
   document.getElementById('subTierName').textContent = labels[sub] || 'Free';
   document.getElementById('subCreditsPerDay').textContent = `${credits[sub] || 10} кредита/ден`;
+  document.getElementById('subUpgradeStatus').textContent = '';
+  document.getElementById('paypalButtonContainer').innerHTML = '';
+  selectedSubTier = null;
+  document.querySelectorAll('.sub-tier-card').forEach(c => c.classList.remove('selected'));
   document.getElementById('subModal').classList.add('show');
+}
+
+window.selectSubTier = (tier) => {
+  selectedSubTier = tier;
+  document.querySelectorAll('.sub-tier-card').forEach(c => c.classList.remove('selected'));
+  document.querySelector('.sub-tier-card[data-tier="' + tier + '"]').classList.add('selected');
+  document.getElementById('subUpgradeStatus').textContent = '';
+  renderPayPalButton(tier);
+};
+
+function renderPayPalButton(tier) {
+  const container = document.getElementById('paypalButtonContainer');
+  container.innerHTML = '';
+
+  const prices = { plus: 5, pro: 10, ultra: 20 };
+  const price = prices[tier];
+  if (!price) return;
+
+  if (typeof paypal !== 'undefined') {
+    paypal.Buttons({
+      createOrder: function(data, actions) {
+        return actions.order.create({
+          purchase_units: [{
+            description: 'Виево банда - ' + tier.charAt(0).toUpperCase() + tier.slice(1),
+            amount: { value: price.toString(), currency_code: 'BGN' }
+          }]
+        });
+      },
+      onApprove: function(data, actions) {
+        return actions.order.capture().then(function(details) {
+          db.collection('users').doc(currentUser.uid).update({
+            subscription: tier
+          }).then(() => {
+            document.getElementById('subUpgradeStatus').textContent = 'Абонаментът е активиран! Благодарим ти, ' + details.payer.name.given_name + '!';
+            document.getElementById('subUpgradeStatus').style.color = 'var(--accent)';
+            currentUserData.subscription = tier;
+            updateUI();
+            showSubModal();
+          }).catch(console.error);
+        });
+      },
+      onError: function(err) {
+        document.getElementById('subUpgradeStatus').textContent = 'Грешка при плащане: ' + err.message;
+        document.getElementById('subUpgradeStatus').style.color = 'var(--danger)';
+      }
+    }).render(container);
+  } else {
+    container.innerHTML = '<p style="color:var(--text-muted);font-size:0.85rem">PayPal зареждане...</p>';
+    setTimeout(() => renderPayPalButton(tier), 2000);
+  }
 }
 
 window.closeModal = (id) => {
@@ -460,3 +665,5 @@ function toggleTheme() {
   const saved = localStorage.getItem('vievo-theme');
   if (saved) document.documentElement.setAttribute('data-theme', saved);
 })();
+
+

@@ -9,15 +9,34 @@
 <body>
   <div class="landing">
     <div class="landing-content">
-      <div class="logo">Виево <span>банда</span></div>
+      <h1 class="logo">Виево <span>банда</span></h1>
       <p class="tagline">Единство, игри и родопски дух</p>
+      <p class="landing-subtitle">Онлайн общност за хората от Виево, Смолян. Чат, игри, форум — всичко на едно място.</p>
       <div class="landing-buttons">
-        <a href="login/" class="btn btn-primary">Влез</a>
-        <a href="signup/" class="btn btn-secondary">Регистрация</a>
+        <a href="/login/" class="btn btn-primary">Влез</a>
+        <a href="/signup/" class="btn btn-secondary">Регистрация</a>
       </div>
     </div>
-    <div class="theme-toggle" onclick="toggleTheme()">🌓</div>
+    <div class="landing-features">
+      <div class="landing-feature">
+        <div class="feature-icon">🎮</div>
+        <h3>Игри</h3>
+        <p>Забавни игри с класации и награди</p>
+      </div>
+      <div class="landing-feature">
+        <div class="feature-icon">💬</div>
+        <h3>Чат</h3>
+        <p>Общувай с хора от Виево</p>
+      </div>
+      <div class="landing-feature">
+        <div class="feature-icon">🏆</div>
+        <h3>Форум</h3>
+        <p>Споделяй и дискутирай</p>
+      </div>
+    </div>
   </div>
+
+  <div class="theme-toggle" onclick="toggleTheme()">🌓</div>
 
   <script>
     function toggleTheme() {

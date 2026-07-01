@@ -6,10 +6,12 @@
   <title>Начало - Виево банда</title>
   <link rel="stylesheet" href="../css/style.css">
   <link rel="stylesheet" href="../css/home.css">
+  <script src="https://www.paypal.com/sdk/js?client-id=sb&currency=BGN" data-sdk-integration-source="button-factory"></script>
 </head>
 <body>
   <nav class="navbar">
     <div class="nav-brand">Виево <span>банда</span></div>
+    <button class="sidebar-toggle mobile-menu-btn" onclick="toggleMobileMenu()">☰</button>
     <div class="nav-links">
       <a href="/home/" class="active">Начало</a>
       <a href="/games/">Игри</a>
@@ -85,12 +87,25 @@
       </section>
 
       <section id="chat" class="content-section">
-        <h2>Чат</h2>
-        <div id="chatBox" class="chat-box">
-          <div id="chatMessages" class="chat-messages"></div>
-          <div class="chat-input-area">
-            <input type="text" id="chatInput" placeholder="Напиши съобщение..." maxlength="500">
-            <button id="chatSendBtn" class="btn btn-primary">📨</button>
+        <h2>Лични съобщения</h2>
+        <div class="dm-layout">
+          <div class="dm-sidebar">
+            <button class="btn btn-primary btn-sm" id="newDmBtn" style="width:100%;margin-bottom:0.5rem">+ Нов разговор</button>
+            <div id="conversationsList" class="dm-conversations">
+              <div class="dm-placeholder">Няма разговори</div>
+            </div>
+          </div>
+          <div class="dm-main">
+            <div class="dm-header" id="dmHeader">
+              <span id="dmPartnerName">Избери разговор</span>
+            </div>
+            <div id="dmMessages" class="dm-messages">
+              <div class="dm-placeholder">Избери разговор за да видиш съобщенията</div>
+            </div>
+            <div class="dm-input-area" id="dmInputArea" style="display:none">
+              <input type="text" id="dmInput" placeholder="Напиши съобщение..." maxlength="1000">
+              <button id="dmSendBtn" class="btn btn-primary">📨</button>
+            </div>
           </div>
         </div>
       </section>
@@ -106,6 +121,42 @@
 
   <div class="ad-banner" id="adBanner">
     <div id="adPlaceholder">Реклама</div>
+  </div>
+
+  <!-- Forum Thread Modal -->
+  <div class="modal-overlay" id="forumModal">
+    <div class="modal modal-wide" style="position:relative;max-width:700px">
+      <button class="modal-close" onclick="closeForumModal()">&times;</button>
+      <div id="forumThreadDetail">
+        <div id="forumThreadTitle" style="font-size:1.3rem;font-weight:800;margin-bottom:0.3rem"></div>
+        <div id="forumThreadMeta" style="font-size:0.82rem;color:var(--text-muted);margin-bottom:1rem"></div>
+        <div id="forumThreadContent" style="color:var(--text-secondary);line-height:1.8;margin-bottom:1.5rem;white-space:pre-wrap"></div>
+        <hr style="border-color:var(--border);margin-bottom:1rem">
+        <h3 style="font-size:1rem;margin-bottom:0.75rem">Отговори</h3>
+        <div id="forumReplies" class="forum-replies">
+          <div style="color:var(--text-muted);font-size:0.88rem">Все още няма отговори.</div>
+        </div>
+        <div class="dm-input-area" style="margin-top:1rem;border-top:1px solid var(--border);padding-top:1rem">
+          <input type="text" id="forumReplyInput" placeholder="Напиши отговор..." maxlength="1000">
+          <button id="forumReplyBtn" class="btn btn-primary btn-sm">Отговори</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- New DM Modal -->
+  <div class="modal-overlay" id="newDmModal">
+    <div class="modal" style="position:relative">
+      <div class="modal-header">
+        <h2>Нов разговор</h2>
+        <button class="modal-close" onclick="closeModal('newDmModal')">&times;</button>
+      </div>
+      <div class="form-group">
+        <label>Избери потребител</label>
+        <input type="text" id="dmUserSearch" placeholder="Търси потребител..." oninput="searchDmUsers()">
+      </div>
+      <div id="dmUserResults" class="dm-user-results"></div>
+    </div>
   </div>
 
   <!-- Profile Modal -->
@@ -166,17 +217,21 @@
         <div style="font-size:1.5rem;font-weight:800" id="subTierName">Free</div>
         <div style="font-size:0.85rem;color:var(--text-secondary);margin-top:0.3rem" id="subCreditsPerDay">10 кредита/ден</div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1rem">
-        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:0.75rem;text-align:center">
-          <div style="font-weight:700;font-size:0.9rem">Plus</div>
-          <div style="font-size:0.75rem;color:var(--text-muted)">15 кд/ден</div>
+      <div class="sub-tiers" style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1.5rem">
+        <div class="sub-tier-card" data-tier="plus" onclick="selectSubTier('plus')">
+          <div class="sub-tier-name" style="font-weight:700;font-size:0.9rem">Plus</div>
+          <div class="sub-tier-price" style="font-size:1.2rem;font-weight:800;color:var(--accent-blue);margin:0.3rem 0">5 лв</div>
+          <div style="font-size:0.75rem;color:var(--text-muted)">15 кд/ден • Без реклами</div>
         </div>
-        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:0.75rem;text-align:center">
-          <div style="font-weight:700;font-size:0.9rem;color:var(--accent)">Pro</div>
-          <div style="font-size:0.75rem;color:var(--text-muted)">25 кд/ден</div>
+        <div class="sub-tier-card" data-tier="pro" onclick="selectSubTier('pro')">
+          <div class="sub-tier-name" style="font-weight:700;font-size:0.9rem">Pro</div>
+          <div class="sub-tier-price" style="font-size:1.2rem;font-weight:800;color:var(--accent);margin:0.3rem 0">10 лв</div>
+          <div style="font-size:0.75rem;color:var(--text-muted)">25 кд/ден • Без реклами</div>
         </div>
       </div>
-      <p style="text-align:center;font-size:0.85rem;color:var(--text-muted)">Управлението на абонаменти става през PayPal</p>
+      <div id="paypalButtonContainer" style="margin-bottom:0.5rem"></div>
+      <div id="subUpgradeStatus" class="status-msg"></div>
+      <p style="text-align:center;font-size:0.82rem;color:var(--text-muted)">Абонаментът се подновява всеки месец. Можеш да прекратиш по всяко време.</p>
     </div>
   </div>
 
@@ -184,5 +239,11 @@
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
   <script src="../js/home.js"></script>
+<script>
+function toggleMobileMenu() {
+  document.querySelector('.nav-links').classList.toggle('show');
+  document.querySelector('.sidebar').classList.toggle('show');
+}
+</script>
 </body>
 </html>

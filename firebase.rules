@@ -100,6 +100,21 @@ service cloud.firestore {
           || getUserRole(request.auth.uid) == 'owner');
     }
 
+    // Conversations (DMs)
+    match /conversations/{convId} {
+      allow read: if isAuth() && request.auth.uid in resource.data.participants;
+      allow create: if isAuth();
+      allow update: if isAuth() && request.auth.uid in resource.data.participants;
+      allow delete: if false;
+      
+      // Messages subcollection
+      match /messages/{messageId} {
+        allow read: if isAuth() && request.auth.uid in get(/databases/$(database)/documents/conversations/$(convId)).data.participants;
+        allow create: if isAuth() && request.resource.data.senderId == request.auth.uid;
+        allow update, delete: if false;
+      }
+    }
+
     // Deny everything else
     match /{document=**} {
       allow read, write: if false;
