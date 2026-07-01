@@ -61,7 +61,8 @@ function setupTabNavigation() {
       document.querySelectorAll('.admin-nav-item').forEach(n => n.classList.remove('active'));
       document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
       item.classList.add('active');
-      document.getElementById(item.dataset.tab).classList.add('active');
+      const tabEl = document.getElementById('admin-' + item.dataset.tab);
+      if (tabEl) tabEl.classList.add('active');
     });
   });
 }

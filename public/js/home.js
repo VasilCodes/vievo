@@ -110,7 +110,7 @@ async function loadAds() {
   if (!adBanner) return;
 
   try {
-    const snap = await db.collection('ads').where('active', '==', true).orderBy('createdAt', 'desc').limit(1).get();
+    const snap = await db.collection('ads').where('active', '==', true).limit(1).get();
     if (!snap.empty) {
       const ad = snap.docs[0].data();
       if (ad.type === 'adsense') {
