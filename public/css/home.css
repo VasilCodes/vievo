@@ -70,7 +70,8 @@
 
 .main-content { flex: 1; padding: 1.5rem 2rem; max-width: 800px; }
 
-.content-section { margin-bottom: 2.5rem; }
+.content-section { display: none; }
+.content-section.active { display: block; margin-bottom: 2.5rem; animation: fadeIn 0.25s ease; }
 
 .content-section h2 {
   font-size: 1.3rem;

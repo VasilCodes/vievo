@@ -20,11 +20,11 @@ auth.onAuthStateChanged(async (user) => {
   currentUser = user;
   try {
     const doc = await db.collection('users').doc(user.uid).get();
-    if (!doc.exists) { window.location.href = '/'; return; }
+    if (!doc.exists) { window.location.href = '/home/'; return; }
     currentUserData = doc.data();
-    if (currentUserData.role !== 'admin' && currentUserData.role !== 'owner') { window.location.href = '/'; return; }
+    if (currentUserData.role !== 'admin' && currentUserData.role !== 'owner') { window.location.href = '/home/'; return; }
     initAdmin();
-  } catch (err) { console.error(err); window.location.href = '/'; }
+  } catch (err) { console.error(err); window.location.href = '/home/'; }
 });
 
 function initAdmin() {
