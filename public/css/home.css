@@ -355,9 +355,10 @@
 .modal-wide { max-width:700px; }
 
 @media (max-width: 768px) {
-  .admin-sidebar { width: 50px; }
-  .admin-sidebar a { padding: 0.7rem; justify-content: center; font-size: 0; }
-  .admin-sidebar a::before { font-size: 1.1rem; }
+  .admin-sidebar { width: 56px; }
+  .admin-sidebar a { padding: 0.7rem; justify-content: center; gap: 0; }
+  .admin-sidebar a .nav-icon { font-size: 1.2rem; }
+  .admin-sidebar a span:not(.nav-icon) { display: none; }
   .admin-content { padding: 1rem; }
   .stats-grid { grid-template-columns: repeat(2, 1fr); }
   .dm-layout { flex-direction:column; height:auto; }

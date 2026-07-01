@@ -102,27 +102,32 @@ a:hover { color: var(--accent-hover); }
 
 .landing-buttons { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
 
-.landing-features {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1.5rem;
-  margin-top: 4rem;
-  max-width: 800px;
-  width: 100%;
+.landing-nav {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin: 1.5rem 0 2.5rem;
 }
-.landing-feature {
+.landing-nav-link {
   background: var(--bg-card);
   backdrop-filter: blur(12px);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 1.5rem;
+  padding: 1rem 2rem;
   text-align: center;
   transition: all var(--transition);
+  color: var(--text);
+  font-size: 1.05rem;
+  font-weight: 600;
+  text-decoration: none;
+  min-width: 140px;
 }
-.landing-feature:hover { border-color: var(--accent); transform: translateY(-4px); }
-.landing-feature .feature-icon { font-size: 2rem; margin-bottom: 0.75rem; }
-.landing-feature h3 { font-size: 1rem; margin-bottom: 0.3rem; }
-.landing-feature p { font-size: 0.85rem; color: var(--text-secondary); }
+.landing-nav-link:hover {
+  border-color: var(--accent);
+  transform: translateY(-4px);
+  color: var(--accent);
+}
 
 .btn {
   padding: 0.7rem 1.75rem;
@@ -456,13 +461,15 @@ a:hover { color: var(--accent-hover); }
   .sidebar-toggle { display: flex; }
   .main-content { padding: 1rem; max-width: 100%; }
   .games-grid { grid-template-columns: 1fr; }
-  .admin-sidebar { width: 50px; font-size: 0; }
-  .admin-sidebar a { padding: 0.7rem; justify-content: center; }
+  .admin-sidebar { width: 56px; }
+  .admin-sidebar a { padding: 0.7rem; justify-content: center; gap: 0; }
   .admin-sidebar a .nav-icon { font-size: 1.2rem; }
+  .admin-sidebar a span:not(.nav-icon) { display: none; }
   .admin-content { padding: 1rem; }
   .stats-grid { grid-template-columns: repeat(2, 1fr); }
   .modal { padding: 1.5rem; margin: 0.5rem; max-width: 100%; }
   .landing-content { padding: 1rem; }
   .landing h1 { font-size: 2rem; }
-  .landing-features { grid-template-columns: 1fr; }
+  .landing-nav { flex-direction: column; align-items: center; }
+  .landing-nav-link { min-width: 200px; }
 }

@@ -229,7 +229,6 @@ async function loadConversations() {
   try {
     const snap = await db.collection('conversations')
       .where('participants', 'array-contains', currentUser.uid)
-      .orderBy('lastActivity', 'desc')
       .get();
 
     container.innerHTML = '';
@@ -238,14 +237,21 @@ async function loadConversations() {
       return;
     }
 
-    snap.forEach(doc => {
-      const conv = doc.data();
+    const convs = [];
+    snap.forEach(doc => convs.push({ id: doc.id, data: doc.data() }));
+    convs.sort((a, b) => {
+      const aTime = a.data.lastActivity ? a.data.lastActivity.toMillis() : 0;
+      const bTime = b.data.lastActivity ? b.data.lastActivity.toMillis() : 0;
+      return bTime - aTime;
+    });
+
+    convs.forEach(({ id, data: conv }) => {
       const otherUid = conv.participants.find(id => id !== currentUser.uid);
       const partnerName = (conv.partnerNameFor && conv.partnerNameFor[currentUser.uid]) || conv.partnerName || 'Потребител';
       const div = document.createElement('div');
-      div.className = 'dm-conv-item' + (doc.id === currentConversationId ? ' active' : '');
+      div.className = 'dm-conv-item' + (id === currentConversationId ? ' active' : '');
       div.innerHTML = '<div class="dm-conv-name">' + partnerName + '</div><div class="dm-conv-preview">' + (conv.lastMessage || '') + '</div>';
-      div.onclick = () => openConversation(doc.id, otherUid, partnerName);
+      div.onclick = () => openConversation(id, otherUid, partnerName);
       container.appendChild(div);
     });
   } catch (err) {
@@ -612,7 +618,7 @@ function renderPayPalButton(tier) {
         return actions.order.create({
           purchase_units: [{
             description: 'Виево банда - ' + tier.charAt(0).toUpperCase() + tier.slice(1),
-            amount: { value: price.toString(), currency_code: 'BGN' }
+            amount: { value: price.toString(), currency_code: 'EUR' }
           }]
         });
       },

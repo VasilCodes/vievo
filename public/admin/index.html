@@ -20,13 +20,13 @@
 
   <div class="admin-layout">
     <aside class="admin-sidebar">
-      <a href="#admin-dashboard" class="admin-nav-item active" data-tab="dashboard">Табло</a>
-      <a href="#admin-users" class="admin-nav-item" data-tab="users">Потребители</a>
-      <a href="#admin-news" class="admin-nav-item" data-tab="news">Новини</a>
-      <a href="#admin-approvals" class="admin-nav-item" data-tab="approvals">Одобрения</a>
-      <a href="#admin-ads" class="admin-nav-item" data-tab="ads">Реклами</a>
-      <a href="#admin-subscriptions" class="admin-nav-item" data-tab="subscriptions">Абонаменти</a>
-      <a href="#admin-events" class="admin-nav-item" data-tab="events">Събития</a>
+      <a href="#admin-dashboard" class="admin-nav-item active" data-tab="dashboard"><span class="nav-icon">📊</span> Табло</a>
+      <a href="#admin-users" class="admin-nav-item" data-tab="users"><span class="nav-icon">👥</span> Потребители</a>
+      <a href="#admin-news" class="admin-nav-item" data-tab="news"><span class="nav-icon">📰</span> Новини</a>
+      <a href="#admin-approvals" class="admin-nav-item" data-tab="approvals"><span class="nav-icon">✅</span> Одобрения</a>
+      <a href="#admin-ads" class="admin-nav-item" data-tab="ads"><span class="nav-icon">📢</span> Реклами</a>
+      <a href="#admin-subscriptions" class="admin-nav-item" data-tab="subscriptions"><span class="nav-icon">💎</span> Абонаменти</a>
+      <a href="#admin-events" class="admin-nav-item" data-tab="events"><span class="nav-icon">📅</span> Събития</a>
     </aside>
 
     <main class="admin-content">
@@ -180,6 +180,50 @@
       </div>
       <p id="editUserStatus" class="status-msg"></p>
       <button class="btn btn-primary" onclick="saveEditUser()">Запази промените</button>
+    </div>
+  </div>
+
+  <!-- Edit News Modal -->
+  <div class="modal-overlay" id="editNewsModal">
+    <div class="modal" style="position:relative">
+      <div class="modal-header">
+        <h2>Редактирай новина</h2>
+        <button class="modal-close" onclick="closeModal('editNewsModal')">&times;</button>
+      </div>
+      <div class="form-group">
+        <label>Заглавие</label>
+        <input type="text" id="editNewsTitle">
+      </div>
+      <div class="form-group">
+        <label>Съдържание</label>
+        <textarea id="editNewsContent"></textarea>
+      </div>
+      <p id="editNewsStatus" class="status-msg"></p>
+      <button class="btn btn-primary" onclick="saveEditNews()">Запази</button>
+    </div>
+  </div>
+
+  <!-- Edit Event Modal -->
+  <div class="modal-overlay" id="editEventModal">
+    <div class="modal" style="position:relative">
+      <div class="modal-header">
+        <h2>Редактирай събитие</h2>
+        <button class="modal-close" onclick="closeModal('editEventModal')">&times;</button>
+      </div>
+      <div class="form-group">
+        <label>Заглавие</label>
+        <input type="text" id="editEventTitle">
+      </div>
+      <div class="form-group">
+        <label>Дата</label>
+        <input type="date" id="editEventDate">
+      </div>
+      <div class="form-group">
+        <label>Описание</label>
+        <textarea id="editEventDescription"></textarea>
+      </div>
+      <p id="editEventStatus" class="status-msg"></p>
+      <button class="btn btn-primary" onclick="saveEditEvent()">Запази</button>
     </div>
   </div>
 

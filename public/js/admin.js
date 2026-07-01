@@ -155,8 +155,10 @@ async function loadNews() {
         <div class="item-info">
           <strong>${n.title}</strong>
           <div style="font-size:0.82rem;color:var(--text-muted)">${n.author} • ${time}</div>
+          <div style="font-size:0.82rem;color:var(--text-muted);margin-top:0.25rem;max-width:500px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${n.content}</div>
         </div>
         <div class="item-actions">
+          <button class="btn btn-small btn-ghost" onclick="editNews('${doc.id}')">Редактирай</button>
           <button class="btn btn-small btn-danger" onclick="deleteNews('${doc.id}')">Изтрий</button>
         </div>
       `;
@@ -300,8 +302,10 @@ async function loadEvents() {
         <div class="item-info">
           <strong>${e.title}</strong>
           <div style="font-size:0.82rem;color:var(--text-muted)">📅 ${dateStr}</div>
+          <div style="font-size:0.82rem;color:var(--text-muted);margin-top:0.25rem;max-width:500px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.description || ''}</div>
         </div>
         <div class="item-actions">
+          <button class="btn btn-small btn-ghost" onclick="editEvent('${doc.id}')">Редактирай</button>
           <button class="btn btn-small btn-danger" onclick="deleteEvent('${doc.id}')">Изтрий</button>
         </div>
       `;
@@ -314,6 +318,69 @@ window.deleteEvent = async (id) => {
   if (!confirm('Сигурен ли си?')) return;
   try { await db.collection('events').doc(id).delete(); loadEvents(); }
   catch (err) { console.error(err); }
+};
+
+let editingNewsId = null;
+let editingEventId = null;
+
+window.closeModal = (id) => {
+  document.getElementById(id).classList.remove('show');
+};
+
+window.editNews = async (id) => {
+  try {
+    const doc = await db.collection('news').doc(id).get();
+    if (!doc.exists) return;
+    const n = doc.data();
+    editingNewsId = id;
+    document.getElementById('editNewsTitle').value = n.title;
+    document.getElementById('editNewsContent').value = n.content;
+    document.getElementById('editNewsStatus').textContent = '';
+    document.getElementById('editNewsModal').classList.add('show');
+  } catch (err) { console.error(err); }
+};
+
+window.saveEditNews = async () => {
+  const title = document.getElementById('editNewsTitle').value.trim();
+  const content = document.getElementById('editNewsContent').value.trim();
+  const status = document.getElementById('editNewsStatus');
+  if (!title || !content) { status.textContent = 'Попълни всички полета.'; status.style.color = 'var(--danger)'; return; }
+  try {
+    await db.collection('news').doc(editingNewsId).update({ title, content });
+    status.textContent = 'Запазено!';
+    status.style.color = 'var(--accent)';
+    document.getElementById('editNewsModal').classList.remove('show');
+    loadNews();
+  } catch (err) { status.textContent = 'Грешка: ' + err.message; status.style.color = 'var(--danger)'; }
+};
+
+window.editEvent = async (id) => {
+  try {
+    const doc = await db.collection('events').doc(id).get();
+    if (!doc.exists) return;
+    const e = doc.data();
+    editingEventId = id;
+    document.getElementById('editEventTitle').value = e.title;
+    document.getElementById('editEventDate').value = e.date ? new Date(e.date.toMillis()).toISOString().split('T')[0] : '';
+    document.getElementById('editEventDescription').value = e.description || '';
+    document.getElementById('editEventStatus').textContent = '';
+    document.getElementById('editEventModal').classList.add('show');
+  } catch (err) { console.error(err); }
+};
+
+window.saveEditEvent = async () => {
+  const title = document.getElementById('editEventTitle').value.trim();
+  const date = document.getElementById('editEventDate').value;
+  const description = document.getElementById('editEventDescription').value.trim();
+  const status = document.getElementById('editEventStatus');
+  if (!title || !date) { status.textContent = 'Попълни заглавие и дата.'; status.style.color = 'var(--danger)'; return; }
+  try {
+    await db.collection('events').doc(editingEventId).update({ title, date: new Date(date), description });
+    status.textContent = 'Запазено!';
+    status.style.color = 'var(--accent)';
+    document.getElementById('editEventModal').classList.remove('show');
+    loadEvents();
+  } catch (err) { status.textContent = 'Грешка: ' + err.message; status.style.color = 'var(--danger)'; }
 };
 
 function setupAdminListeners() {
