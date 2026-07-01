@@ -44,7 +44,7 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
       return;
     }
 
-    window.location.href = '/home/';
+    window.location.href = '/';
   } catch (err) {
     if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
       errorEl.textContent = 'Грешен имейл или парола.';

@@ -3,247 +3,41 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Начало - Виево банда</title>
+  <title>Виево банда</title>
   <link rel="stylesheet" href="../css/style.css">
-  <link rel="stylesheet" href="../css/home.css">
-  <script src="https://www.paypal.com/sdk/js?client-id=sb&currency=EUR" data-sdk-integration-source="button-factory"></script>
 </head>
 <body>
-  <nav class="navbar">
-    <div class="nav-brand">Виево <span>банда</span></div>
-    <button class="sidebar-toggle mobile-menu-btn" onclick="toggleMobileMenu()">☰</button>
-    <div class="nav-links">
-      <a href="/home/" class="active">Начало</a>
-      <a href="/games/">Игри</a>
-      <a href="/home/#forum">Форум</a>
-      <a href="/home/#chat">Чат</a>
-      <a href="/home/#events">Събития</a>
-    </div>
-    <div class="nav-user">
-      <span id="navCredits" class="credits-badge">💰 0</span>
-      <span id="navXP" class="xp-badge">⚡ 0</span>
-      <div class="user-dropdown">
-        <button class="user-btn" id="userBtn">
-          <span id="navDisplayName">Потребител</span>
-          <span class="badge-tier" id="navBadge"></span>
-        </button>
-        <div class="dropdown-menu" id="dropdownMenu">
-          <a href="#" id="profileLink"><span class="icon">👤</span> Профил</a>
-          <a href="#" id="settingsLink"><span class="icon">⚙️</span> Настройки</a>
-          <a href="#" id="subscriptionLink"><span class="icon">💎</span> Абонамент</a>
-          <hr>
-          <a href="#" id="adminLink" style="display:none"><span class="icon">🛡️</span> Админ панел</a>
-          <hr>
-          <a href="#" id="logoutBtn"><span class="icon">🚪</span> Изход</a>
-        </div>
-      </div>
-      <button class="theme-toggle-small" onclick="toggleTheme()">🌓</button>
-    </div>
-  </nav>
-
-  <div class="home-layout">
-    <aside class="sidebar">
-      <div class="profile-card">
-        <div class="profile-avatar" id="profileAvatar">👤</div>
-        <div class="profile-name" id="profileName">Потребител</div>
-        <div class="profile-info">
-          <span>💰 <span id="profileCredits">0</span> кредита</span>
-          <span>⚡ LVL <span id="profileLevel">1</span></span>
-        </div>
-        <div class="profile-badges" id="profileBadges"></div>
-      </div>
-
-      <div class="sidebar-section">
-        <h3>Онлайн</h3>
-        <div id="onlineUsers" class="online-list">
-          <span class="online-count">0 потребители онлайн</span>
-        </div>
-      </div>
-
-      <div class="sidebar-section">
-        <h3>Класация</h3>
-        <div id="leaderboardPreview" class="leaderboard-mini">
-          <div class="lb-item">1. Потребител - 100 XP</div>
-        </div>
-      </div>
-    </aside>
-
-    <main class="main-content">
-      <section id="news" class="content-section">
-        <h2>Новини</h2>
-        <div id="newsFeed" class="news-feed">
-          <div class="news-placeholder">Все още няма новини.</div>
-        </div>
-      </section>
-
-      <section id="forum" class="content-section">
-        <h2>Форум</h2>
-        <div class="forum-toolbar">
-          <button class="btn btn-primary" id="newPostBtn">+ Нова тема</button>
-        </div>
-        <div id="forumThreads" class="forum-list">
-          <div class="forum-placeholder">Все още няма теми във форума.</div>
-        </div>
-      </section>
-
-      <section id="chat" class="content-section">
-        <h2>Лични съобщения</h2>
-        <div class="dm-layout">
-          <div class="dm-sidebar">
-            <button class="btn btn-primary btn-sm" id="newDmBtn" style="width:100%;margin-bottom:0.5rem">+ Нов разговор</button>
-            <div id="conversationsList" class="dm-conversations">
-              <div class="dm-placeholder">Няма разговори</div>
-            </div>
-          </div>
-          <div class="dm-main">
-            <div class="dm-header" id="dmHeader">
-              <span id="dmPartnerName">Избери разговор</span>
-            </div>
-            <div id="dmMessages" class="dm-messages">
-              <div class="dm-placeholder">Избери разговор за да видиш съобщенията</div>
-            </div>
-            <div class="dm-input-area" id="dmInputArea" style="display:none">
-              <input type="text" id="dmInput" placeholder="Напиши съобщение..." maxlength="1000">
-              <button id="dmSendBtn" class="btn btn-primary">📨</button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section id="events" class="content-section">
-        <h2>Събития</h2>
-        <div id="eventsList" class="events-list">
-          <div class="events-placeholder">Няма предстоящи събития.</div>
-        </div>
-      </section>
-    </main>
-  </div>
-
-  <div class="ad-banner" id="adBanner">
-    <div id="adPlaceholder">Реклама</div>
-  </div>
-
-  <!-- Forum Thread Modal -->
-  <div class="modal-overlay" id="forumModal">
-    <div class="modal modal-wide" style="position:relative;max-width:700px">
-      <button class="modal-close" onclick="closeForumModal()">&times;</button>
-      <div id="forumThreadDetail">
-        <div id="forumThreadTitle" style="font-size:1.3rem;font-weight:800;margin-bottom:0.3rem"></div>
-        <div id="forumThreadMeta" style="font-size:0.82rem;color:var(--text-muted);margin-bottom:1rem"></div>
-        <div id="forumThreadContent" style="color:var(--text-secondary);line-height:1.8;margin-bottom:1.5rem;white-space:pre-wrap"></div>
-        <hr style="border-color:var(--border);margin-bottom:1rem">
-        <h3 style="font-size:1rem;margin-bottom:0.75rem">Отговори</h3>
-        <div id="forumReplies" class="forum-replies">
-          <div style="color:var(--text-muted);font-size:0.88rem">Все още няма отговори.</div>
-        </div>
-        <div class="dm-input-area" style="margin-top:1rem;border-top:1px solid var(--border);padding-top:1rem">
-          <input type="text" id="forumReplyInput" placeholder="Напиши отговор..." maxlength="1000">
-          <button id="forumReplyBtn" class="btn btn-primary btn-sm">Отговори</button>
-        </div>
+  <div class="landing">
+    <div class="landing-content">
+      <h1 class="logo">Виево <span>банда</span></h1>
+      <p class="tagline">Родопска общност за игри, форум и чат</p>
+      <nav class="landing-nav">
+        <a href="/games/" class="landing-nav-link">🎮 Игри</a>
+        <a href="/#forum" class="landing-nav-link">📋 Форум</a>
+        <a href="/#chat" class="landing-nav-link">💬 Чат</a>
+        <a href="/#events" class="landing-nav-link">📅 Събития</a>
+      </nav>
+      <div class="landing-buttons">
+        <a href="/login/" class="btn btn-primary">Влез</a>
+        <a href="/signup/" class="btn btn-secondary">Регистрация</a>
       </div>
     </div>
   </div>
 
-  <!-- New DM Modal -->
-  <div class="modal-overlay" id="newDmModal">
-    <div class="modal" style="position:relative">
-      <div class="modal-header">
-        <h2>Нов разговор</h2>
-        <button class="modal-close" onclick="closeModal('newDmModal')">&times;</button>
-      </div>
-      <div class="form-group">
-        <label>Избери потребител</label>
-        <input type="text" id="dmUserSearch" placeholder="Търси потребител..." oninput="searchDmUsers()">
-      </div>
-      <div id="dmUserResults" class="dm-user-results"></div>
-    </div>
-  </div>
+  <div class="theme-toggle" onclick="toggleTheme()">🌓</div>
 
-  <!-- Profile Modal -->
-  <div class="modal-overlay" id="profileModal">
-    <div class="modal" style="position:relative">
-      <button class="modal-close" onclick="closeModal('profileModal')">&times;</button>
-      <h2>Моят профил</h2>
-      <div style="text-align:center;margin-bottom:1.5rem">
-        <div style="font-size:3rem;margin-bottom:0.5rem" id="modalAvatar">👤</div>
-        <div style="font-size:1.2rem;font-weight:700" id="modalDisplayName">—</div>
-        <div style="font-size:0.85rem;color:var(--text-muted)" id="modalEmail">—</div>
-      </div>
-      <div class="profile-info" style="justify-content:center;margin-bottom:1rem">
-        <span>💰 <span id="modalCredits">0</span> кредита</span>
-        <span>⚡ LVL <span id="modalLevel">1</span></span>
-        <span>🏆 <span id="modalXP">0</span> XP</span>
-      </div>
-      <div id="modalBadges" style="display:flex;gap:0.3rem;flex-wrap:wrap;justify-content:center"></div>
-    </div>
-  </div>
+  <script>
+    function toggleTheme() {
+      const html = document.documentElement;
+      const current = html.getAttribute('data-theme');
+      html.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
+      localStorage.setItem('vievo-theme', html.getAttribute('data-theme'));
+    }
 
-  <!-- Settings Modal -->
-  <div class="modal-overlay" id="settingsModal">
-    <div class="modal" style="position:relative">
-      <button class="modal-close" onclick="closeModal('settingsModal')">&times;</button>
-      <h2>Настройки</h2>
-      <div class="form-group">
-        <label>Цвят на името</label>
-        <input type="text" id="settingsNameColor" placeholder="#4caf50">
-        <div class="color-grid" id="settingsColorGrid">
-          <div class="color-swatch" style="background:#4caf50" data-color="#4caf50"></div>
-          <div class="color-swatch" style="background:#ff6b6b" data-color="#ff6b6b"></div>
-          <div class="color-swatch" style="background:#42a5f5" data-color="#42a5f5"></div>
-          <div class="color-swatch" style="background:#ffd700" data-color="#ffd700"></div>
-          <div class="color-swatch" style="background:#ab47bc" data-color="#ab47bc"></div>
-          <div class="color-swatch" style="background:#ffa726" data-color="#ffa726"></div>
-        </div>
-      </div>
-      <div class="form-group">
-        <label>Тема</label>
-        <select id="settingsTheme">
-          <option value="dark">Тъмна</option>
-          <option value="light">Светла</option>
-        </select>
-      </div>
-      <p id="settingsStatus" class="status-msg"></p>
-      <button class="btn btn-primary" onclick="saveSettings()">Запази</button>
-    </div>
-  </div>
-
-  <!-- Subscription Modal -->
-  <div class="modal-overlay" id="subModal">
-    <div class="modal" style="position:relative">
-      <button class="modal-close" onclick="closeModal('subModal')">&times;</button>
-      <h2>Абонамент</h2>
-      <div style="text-align:center;margin:1.5rem 0">
-        <div style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.5rem">Текущ абонамент</div>
-        <div style="font-size:1.5rem;font-weight:800" id="subTierName">Free</div>
-        <div style="font-size:0.85rem;color:var(--text-secondary);margin-top:0.3rem" id="subCreditsPerDay">10 кредита/ден</div>
-      </div>
-      <div class="sub-tiers" style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1.5rem">
-        <div class="sub-tier-card" data-tier="plus" onclick="selectSubTier('plus')">
-          <div class="sub-tier-name" style="font-weight:700;font-size:0.9rem">Plus</div>
-          <div class="sub-tier-price" style="font-size:1.2rem;font-weight:800;color:var(--accent-blue);margin:0.3rem 0">5 лв</div>
-          <div style="font-size:0.75rem;color:var(--text-muted)">15 кд/ден • Без реклами</div>
-        </div>
-        <div class="sub-tier-card" data-tier="pro" onclick="selectSubTier('pro')">
-          <div class="sub-tier-name" style="font-weight:700;font-size:0.9rem">Pro</div>
-          <div class="sub-tier-price" style="font-size:1.2rem;font-weight:800;color:var(--accent);margin:0.3rem 0">10 лв</div>
-          <div style="font-size:0.75rem;color:var(--text-muted)">25 кд/ден • Без реклами</div>
-        </div>
-      </div>
-      <div id="paypalButtonContainer" style="margin-bottom:0.5rem"></div>
-      <div id="subUpgradeStatus" class="status-msg"></div>
-      <p style="text-align:center;font-size:0.82rem;color:var(--text-muted)">Абонаментът се подновява всеки месец. Можеш да прекратиш по всяко време.</p>
-    </div>
-  </div>
-
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-  <script src="../js/home.js"></script>
-<script>
-function toggleMobileMenu() {
-  document.querySelector('.nav-links').classList.toggle('show');
-  document.querySelector('.sidebar').classList.toggle('show');
-}
-</script>
+    (function() {
+      const saved = localStorage.getItem('vievo-theme');
+      if (saved) document.documentElement.setAttribute('data-theme', saved);
+    })();
+  </script>
 </body>
 </html>
