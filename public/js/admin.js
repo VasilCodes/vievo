@@ -13,45 +13,24 @@ const db = firebase.firestore();
 
 let currentUser = null;
 let currentUserData = null;
+let editingUserId = null;
 
 auth.onAuthStateChanged(async (user) => {
-  if (!user) {
-    window.location.href = '/login/';
-    return;
-  }
-
+  if (!user) { window.location.href = '/login/'; return; }
   currentUser = user;
-
   try {
     const doc = await db.collection('users').doc(user.uid).get();
-    if (!doc.exists) {
-      window.location.href = '/home/';
-      return;
-    }
-
+    if (!doc.exists) { window.location.href = '/home/'; return; }
     currentUserData = doc.data();
-    if (currentUserData.role !== 'admin' && currentUserData.role !== 'owner') {
-      window.location.href = '/home/';
-      return;
-    }
-
+    if (currentUserData.role !== 'admin' && currentUserData.role !== 'owner') { window.location.href = '/home/'; return; }
     initAdmin();
-  } catch (err) {
-    console.error(err);
-    window.location.href = '/home/';
-  }
+  } catch (err) { console.error(err); window.location.href = '/home/'; }
 });
 
 function initAdmin() {
-  loadStats();
-  loadUsers();
-  loadNews();
-  loadPendingApprovals();
-  loadAds();
-  loadSubscriptions();
-  loadEvents();
-  setupAdminListeners();
-  setupTabNavigation();
+  loadStats(); loadUsers(); loadNews(); loadPendingApprovals();
+  loadAds(); loadSubscriptions(); loadEvents();
+  setupAdminListeners(); setupTabNavigation();
 }
 
 function setupTabNavigation() {
@@ -73,14 +52,11 @@ async function loadStats() {
     const pendingSnap = await db.collection('users').where('approved', '==', false).get();
     const newsSnap = await db.collection('news').get();
     const subsSnap = await db.collection('users').where('subscription', 'in', ['plus', 'pro', 'ultra']).get();
-
     document.getElementById('statUsers').textContent = usersSnap.size;
     document.getElementById('statPending').textContent = pendingSnap.size;
     document.getElementById('statNews').textContent = newsSnap.size;
     document.getElementById('statSubs').textContent = subsSnap.size;
-  } catch (err) {
-    console.error(err);
-  }
+  } catch (err) { console.error(err); }
 }
 
 async function loadUsers() {
@@ -90,45 +66,80 @@ async function loadUsers() {
     tbody.innerHTML = '';
     snap.forEach(doc => {
       const u = doc.data();
+      if (u.role === 'owner' && currentUserData.role !== 'owner') return;
       const tr = document.createElement('tr');
+      const roleColors = { owner: '#ffd700', admin: '#ef5350', user: '#4caf50' };
       tr.innerHTML = `
-        <td style="color:${u.nameColor || '#4caf50'}">${u.username}</td>
+        <td style="color:${u.nameColor || '#4caf50'};font-weight:600">${u.username}</td>
         <td>${u.email}</td>
-        <td><span class="badge" style="background:${u.role === 'owner' ? '#ffd700' : u.role === 'admin' ? '#ef5350' : '#4caf50'}">${u.role}</span></td>
+        <td><span class="badge" style="background:${roleColors[u.role] || '#4caf50'}">${u.role}</span></td>
         <td>${u.subscription || 'free'}</td>
         <td>${u.credits || 0}</td>
-        <td>${u.approved ? '✅' : '⏳'}</td>
+        <td>${u.banned ? '🚫' : (u.approved ? '✅' : '⏳')}</td>
         <td>
-          <button class="btn btn-small btn-secondary" onclick="toggleUserRole('${doc.id}', '${u.role}')">Смени роля</button>
-          <button class="btn btn-small ${u.banned ? 'btn-primary' : 'btn-danger'}" onclick="toggleUserBan('${doc.id}', ${!!u.banned})">${u.banned ? 'Отблокирай' : 'Блокирай'}</button>
+          <button class="btn btn-small btn-ghost" onclick="openEditUser('${doc.id}')">✏️ Редактирай</button>
         </td>
       `;
       tbody.appendChild(tr);
     });
-  } catch (err) {
-    console.error(err);
-  }
+  } catch (err) { console.error(err); }
 }
 
-window.toggleUserRole = async (uid, currentRole) => {
-  const roles = ['user', 'admin'];
-  const nextRole = currentRole === 'user' ? 'admin' : 'user';
+window.openEditUser = async (uid) => {
+  editingUserId = uid;
   try {
-    await db.collection('users').doc(uid).update({ role: nextRole });
+    const doc = await db.collection('users').doc(uid).get();
+    const u = doc.data();
+    document.getElementById('editUsername').value = u.username || '';
+    document.getElementById('editRole').value = u.role || 'user';
+    document.getElementById('editSubscription').value = u.subscription || 'free';
+    document.getElementById('editCredits').value = u.credits || 0;
+    document.getElementById('editNameColor').value = u.nameColor || '#4caf50';
+    document.getElementById('editApproved').checked = !!u.approved;
+    document.getElementById('editBanned').checked = !!u.banned;
+    document.getElementById('editUserStatus').textContent = '';
+    document.querySelectorAll('.color-swatch').forEach(s => {
+      s.classList.toggle('selected', s.dataset.color === (u.nameColor || '#4caf50'));
+    });
+    document.getElementById('editUserModal').classList.add('show');
+  } catch (err) { console.error(err); }
+};
+
+window.closeEditModal = () => {
+  document.getElementById('editUserModal').classList.remove('show');
+  editingUserId = null;
+};
+
+window.saveEditUser = async () => {
+  if (!editingUserId) return;
+  const status = document.getElementById('editUserStatus');
+  try {
+    await db.collection('users').doc(editingUserId).update({
+      username: document.getElementById('editUsername').value.trim(),
+      role: document.getElementById('editRole').value,
+      subscription: document.getElementById('editSubscription').value,
+      credits: parseInt(document.getElementById('editCredits').value) || 0,
+      nameColor: document.getElementById('editNameColor').value,
+      approved: document.getElementById('editApproved').checked,
+      banned: document.getElementById('editBanned').checked
+    });
+    status.textContent = 'Потребителят е обновен!';
+    status.style.color = 'var(--accent)';
+    closeEditModal();
     loadUsers();
   } catch (err) {
-    console.error(err);
+    status.textContent = 'Грешка: ' + err.message;
+    status.style.color = 'var(--danger)';
   }
 };
 
-window.toggleUserBan = async (uid, isBanned) => {
-  try {
-    await db.collection('users').doc(uid).update({ banned: !isBanned });
-    loadUsers();
-  } catch (err) {
-    console.error(err);
+document.addEventListener('click', (e) => {
+  if (e.target.classList.contains('color-swatch')) {
+    document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
+    e.target.classList.add('selected');
+    document.getElementById('editNameColor').value = e.target.dataset.color;
   }
-};
+});
 
 async function loadNews() {
   const container = document.getElementById('newsList');
@@ -143,7 +154,7 @@ async function loadNews() {
       div.innerHTML = `
         <div class="item-info">
           <strong>${n.title}</strong>
-          <div style="font-size:0.85rem;color:var(--text-muted)">${n.author} • ${time}</div>
+          <div style="font-size:0.82rem;color:var(--text-muted)">${n.author} • ${time}</div>
         </div>
         <div class="item-actions">
           <button class="btn btn-small btn-danger" onclick="deleteNews('${doc.id}')">Изтрий</button>
@@ -151,29 +162,20 @@ async function loadNews() {
       `;
       container.appendChild(div);
     });
-  } catch (err) {
-    console.error(err);
-  }
+  } catch (err) { console.error(err); }
 }
 
 window.deleteNews = async (id) => {
   if (!confirm('Сигурен ли си?')) return;
-  try {
-    await db.collection('news').doc(id).delete();
-    loadNews();
-  } catch (err) {
-    console.error(err);
-  }
+  try { await db.collection('news').doc(id).delete(); loadNews(); }
+  catch (err) { console.error(err); }
 };
 
 async function loadPendingApprovals() {
   const container = document.getElementById('pendingUsers');
   try {
     const snap = await db.collection('users').where('approved', '==', false).get();
-    if (snap.empty) {
-      container.innerHTML = '<p style="color:var(--text-muted)">Няма чакащи одобрение.</p>';
-      return;
-    }
+    if (snap.empty) { container.innerHTML = '<p style="color:var(--text-muted)">Няма чакащи одобрение.</p>'; return; }
     container.innerHTML = '';
     snap.forEach(doc => {
       const u = doc.data();
@@ -182,42 +184,29 @@ async function loadPendingApprovals() {
       div.innerHTML = `
         <div class="item-info">
           <strong>${u.username}</strong>
-          <div style="font-size:0.85rem;color:var(--text-muted)">${u.email}</div>
+          <div style="font-size:0.82rem;color:var(--text-muted)">${u.email}</div>
         </div>
         <div class="item-actions">
-          <button class="btn btn-small btn-primary" onclick="approveUser('${doc.id}')">Одобри</button>
-          <button class="btn btn-small btn-danger" onclick="rejectUser('${doc.id}')">Откажи</button>
+          <button class="btn btn-sm btn-primary" onclick="approveUser('${doc.id}')">Одобри</button>
+          <button class="btn btn-sm btn-danger" onclick="rejectUser('${doc.id}')">Откажи</button>
         </div>
       `;
       container.appendChild(div);
     });
-  } catch (err) {
-    console.error(err);
-  }
+  } catch (err) { console.error(err); }
 }
 
 window.approveUser = async (uid) => {
-  try {
-    await db.collection('users').doc(uid).update({ approved: true });
-    loadPendingApprovals();
-    loadUsers();
-    loadStats();
-  } catch (err) {
-    console.error(err);
-  }
+  try { await db.collection('users').doc(uid).update({ approved: true }); loadPendingApprovals(); loadUsers(); loadStats(); }
+  catch (err) { console.error(err); }
 };
 
 window.rejectUser = async (uid) => {
   if (!confirm('Сигурен ли си, че искаш да откажеш този потребител?')) return;
   try {
     await db.collection('users').doc(uid).delete();
-    const user = await auth.getUser(uid).catch(() => null);
-    if (user) await auth.deleteUser(uid).catch(() => {});
-    loadPendingApprovals();
-    loadStats();
-  } catch (err) {
-    console.error(err);
-  }
+    loadPendingApprovals(); loadStats();
+  } catch (err) { console.error(err); }
 };
 
 async function loadAds() {
@@ -232,50 +221,34 @@ async function loadAds() {
       div.innerHTML = `
         <div class="item-info">
           <strong>${ad.title || 'Без име'}</strong>
-          <div style="font-size:0.85rem;color:var(--text-muted)">${ad.type || 'internal'} • ${ad.active ? 'Активна' : 'Неактивна'}</div>
+          <div style="font-size:0.82rem;color:var(--text-muted)">${ad.type || 'internal'} • ${ad.active ? 'Активна' : 'Неактивна'}</div>
         </div>
         <div class="item-actions">
-          <button class="btn btn-small btn-secondary" onclick="toggleAd('${doc.id}', ${!!ad.active})">${ad.active ? 'Деактивирай' : 'Активирай'}</button>
+          <button class="btn btn-small btn-ghost" onclick="toggleAd('${doc.id}', ${!!ad.active})">${ad.active ? 'Деактивирай' : 'Активирай'}</button>
           <button class="btn btn-small btn-danger" onclick="deleteAd('${doc.id}')">Изтрий</button>
         </div>
       `;
       container.appendChild(div);
     });
-  } catch (err) {
-    console.error(err);
-  }
+  } catch (err) { console.error(err); }
 }
 
 window.toggleAd = async (id, active) => {
-  try {
-    await db.collection('ads').doc(id).update({ active: !active });
-    loadAds();
-  } catch (err) {
-    console.error(err);
-  }
+  try { await db.collection('ads').doc(id).update({ active: !active }); loadAds(); }
+  catch (err) { console.error(err); }
 };
 
 window.deleteAd = async (id) => {
   if (!confirm('Сигурен ли си?')) return;
-  try {
-    await db.collection('ads').doc(id).delete();
-    loadAds();
-  } catch (err) {
-    console.error(err);
-  }
+  try { await db.collection('ads').doc(id).delete(); loadAds(); }
+  catch (err) { console.error(err); }
 };
 
 async function loadSubscriptions() {
   const container = document.getElementById('subscriptionsList');
   try {
-    const snap = await db.collection('users')
-      .where('subscription', 'in', ['plus', 'pro', 'ultra'])
-      .get();
-
-    if (snap.empty) {
-      container.innerHTML = '<p style="color:var(--text-muted)">Няма активни абонаменти.</p>';
-      return;
-    }
+    const snap = await db.collection('users').where('subscription', 'in', ['plus', 'pro', 'ultra']).get();
+    if (snap.empty) { container.innerHTML = '<p style="color:var(--text-muted)">Няма активни абонаменти.</p>'; return; }
     container.innerHTML = '';
     snap.forEach(doc => {
       const u = doc.data();
@@ -286,40 +259,30 @@ async function loadSubscriptions() {
         <div class="item-info">
           <strong style="color:${u.nameColor || '#4caf50'}">${u.username}</strong>
           <span class="badge" style="background:${subColors[u.subscription]}">${u.subscription.toUpperCase()}</span>
-          <div style="font-size:0.85rem;color:var(--text-muted)">${u.email}</div>
+          <div style="font-size:0.82rem;color:var(--text-muted)">${u.email}</div>
         </div>
         <div class="item-actions">
-          <button class="btn btn-small btn-secondary" onclick="changeSub('${doc.id}', '${u.subscription}')">Промени</button>
+          <button class="btn btn-small btn-ghost" onclick="changeSub('${doc.id}', '${u.subscription}')">Промени</button>
           <button class="btn btn-small btn-danger" onclick="removeSub('${doc.id}')">Премахни</button>
         </div>
       `;
       container.appendChild(div);
     });
-  } catch (err) {
-    console.error(err);
-  }
+  } catch (err) { console.error(err); }
 }
 
 window.changeSub = async (uid, currentSub) => {
   const tiers = ['free', 'plus', 'pro', 'ultra'];
   const idx = tiers.indexOf(currentSub);
   const nextSub = tiers[Math.min(idx + 1, tiers.length - 1)];
-  try {
-    await db.collection('users').doc(uid).update({ subscription: nextSub });
-    loadSubscriptions();
-  } catch (err) {
-    console.error(err);
-  }
+  try { await db.collection('users').doc(uid).update({ subscription: nextSub }); loadSubscriptions(); }
+  catch (err) { console.error(err); }
 };
 
 window.removeSub = async (uid) => {
   if (!confirm('Премахване на абонамента?')) return;
-  try {
-    await db.collection('users').doc(uid).update({ subscription: 'free' });
-    loadSubscriptions();
-  } catch (err) {
-    console.error(err);
-  }
+  try { await db.collection('users').doc(uid).update({ subscription: 'free' }); loadSubscriptions(); }
+  catch (err) { console.error(err); }
 };
 
 async function loadEvents() {
@@ -327,10 +290,7 @@ async function loadEvents() {
   try {
     const snap = await db.collection('events').orderBy('date', 'asc').get();
     container.innerHTML = '';
-    if (snap.empty) {
-      container.innerHTML = '<p style="color:var(--text-muted)">Няма събития.</p>';
-      return;
-    }
+    if (snap.empty) { container.innerHTML = '<p style="color:var(--text-muted)">Няма събития.</p>'; return; }
     snap.forEach(doc => {
       const e = doc.data();
       const div = document.createElement('div');
@@ -339,7 +299,7 @@ async function loadEvents() {
       div.innerHTML = `
         <div class="item-info">
           <strong>${e.title}</strong>
-          <div style="font-size:0.85rem;color:var(--text-muted)">📅 ${dateStr}</div>
+          <div style="font-size:0.82rem;color:var(--text-muted)">📅 ${dateStr}</div>
         </div>
         <div class="item-actions">
           <button class="btn btn-small btn-danger" onclick="deleteEvent('${doc.id}')">Изтрий</button>
@@ -347,42 +307,28 @@ async function loadEvents() {
       `;
       container.appendChild(div);
     });
-  } catch (err) {
-    console.error(err);
-  }
+  } catch (err) { console.error(err); }
 }
 
 window.deleteEvent = async (id) => {
   if (!confirm('Сигурен ли си?')) return;
-  try {
-    await db.collection('events').doc(id).delete();
-    loadEvents();
-  } catch (err) {
-    console.error(err);
-  }
+  try { await db.collection('events').doc(id).delete(); loadEvents(); }
+  catch (err) { console.error(err); }
 };
 
 function setupAdminListeners() {
   document.getElementById('adminLogout').addEventListener('click', async () => {
-    await auth.signOut();
-    window.location.href = '/login/';
+    await auth.signOut(); window.location.href = '/login/';
   });
 
   document.getElementById('publishNewsBtn').addEventListener('click', async () => {
     const title = document.getElementById('newsTitle').value.trim();
     const content = document.getElementById('newsContent').value.trim();
     const status = document.getElementById('newsStatus');
-
-    if (!title || !content) {
-      status.textContent = 'Попълни всички полета.';
-      status.style.color = 'var(--danger)';
-      return;
-    }
-
+    if (!title || !content) { status.textContent = 'Попълни всички полета.'; status.style.color = 'var(--danger)'; return; }
     try {
       await db.collection('news').add({
-        title,
-        content,
+        title, content,
         author: currentUserData.username,
         authorColor: currentUserData.nameColor || '#4caf50',
         authorId: currentUser.uid,
@@ -392,12 +338,8 @@ function setupAdminListeners() {
       status.style.color = 'var(--accent)';
       document.getElementById('newsTitle').value = '';
       document.getElementById('newsContent').value = '';
-      loadNews();
-      loadStats();
-    } catch (err) {
-      status.textContent = 'Грешка: ' + err.message;
-      status.style.color = 'var(--danger)';
-    }
+      loadNews(); loadStats();
+    } catch (err) { status.textContent = 'Грешка: ' + err.message; status.style.color = 'var(--danger)'; }
   });
 
   document.getElementById('addAdBtn').addEventListener('click', async () => {
@@ -406,21 +348,11 @@ function setupAdminListeners() {
     const linkUrl = document.getElementById('adLinkUrl').value.trim();
     const type = document.getElementById('adType').value;
     const status = document.getElementById('adStatus');
-
-    if (!title || (!imageUrl && type !== 'adsense')) {
-      status.textContent = 'Попълни задължителните полета.';
-      status.style.color = 'var(--danger)';
-      return;
-    }
-
+    if (!title || (!imageUrl && type !== 'adsense')) { status.textContent = 'Попълни задължителните полета.'; status.style.color = 'var(--danger)'; return; }
     try {
       await db.collection('ads').add({
-        title,
-        imageUrl: type === 'internal' ? imageUrl : '',
-        linkUrl,
-        type,
-        code: type === 'adsense' ? imageUrl : '',
-        active: true,
+        title, imageUrl: type === 'internal' ? imageUrl : '', linkUrl, type,
+        code: type === 'adsense' ? imageUrl : '', active: true,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
       status.textContent = 'Рекламата е добавена!';
@@ -429,10 +361,7 @@ function setupAdminListeners() {
       document.getElementById('adImageUrl').value = '';
       document.getElementById('adLinkUrl').value = '';
       loadAds();
-    } catch (err) {
-      status.textContent = 'Грешка: ' + err.message;
-      status.style.color = 'var(--danger)';
-    }
+    } catch (err) { status.textContent = 'Грешка: ' + err.message; status.style.color = 'var(--danger)'; }
   });
 
   document.getElementById('addEventBtn').addEventListener('click', async () => {
@@ -440,18 +369,10 @@ function setupAdminListeners() {
     const date = document.getElementById('eventDate').value;
     const description = document.getElementById('eventDescription').value.trim();
     const status = document.getElementById('eventStatus');
-
-    if (!title || !date) {
-      status.textContent = 'Попълни заглавие и дата.';
-      status.style.color = 'var(--danger)';
-      return;
-    }
-
+    if (!title || !date) { status.textContent = 'Попълни заглавие и дата.'; status.style.color = 'var(--danger)'; return; }
     try {
       await db.collection('events').add({
-        title,
-        date: new Date(date),
-        description,
+        title, date: new Date(date), description,
         createdBy: currentUser.uid,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
@@ -461,57 +382,6 @@ function setupAdminListeners() {
       document.getElementById('eventDate').value = '';
       document.getElementById('eventDescription').value = '';
       loadEvents();
-    } catch (err) {
-      status.textContent = 'Грешка: ' + err.message;
-      status.style.color = 'var(--danger)';
-    }
+    } catch (err) { status.textContent = 'Грешка: ' + err.message; status.style.color = 'var(--danger)'; }
   });
-
-  document.getElementById('manageCreditsBtn').addEventListener('click', async () => {
-    const select = document.getElementById('creditUserSelect');
-    const uid = select.value;
-    const amount = parseInt(document.getElementById('creditAmount').value);
-    const action = document.getElementById('creditAction').value;
-    const status = document.getElementById('creditStatus');
-
-    if (!uid || !amount) {
-      status.textContent = 'Избери потребител и въведи количество.';
-      status.style.color = 'var(--danger)';
-      return;
-    }
-
-    try {
-      const userRef = db.collection('users').doc(uid);
-      const delta = action === 'add' ? amount : -amount;
-      await userRef.update({
-        credits: firebase.firestore.FieldValue.increment(delta)
-      });
-      status.textContent = `Кредитите са ${action === 'add' ? 'добавени' : 'премахнати'}!`;
-      status.style.color = 'var(--accent)';
-      document.getElementById('creditAmount').value = '';
-      loadUsers();
-    } catch (err) {
-      status.textContent = 'Грешка: ' + err.message;
-      status.style.color = 'var(--danger)';
-    }
-  });
-
-  loadCreditUserSelect();
-}
-
-async function loadCreditUserSelect() {
-  const select = document.getElementById('creditUserSelect');
-  try {
-    const snap = await db.collection('users').orderBy('username', 'asc').get();
-    select.innerHTML = '<option value="">Избери потребител...</option>';
-    snap.forEach(doc => {
-      const u = doc.data();
-      const opt = document.createElement('option');
-      opt.value = doc.id;
-      opt.textContent = `${u.username} (${u.email}) - ${u.credits || 0} кредита`;
-      select.appendChild(opt);
-    });
-  } catch (err) {
-    console.error(err);
-  }
 }

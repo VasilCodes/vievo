@@ -324,6 +324,21 @@ function setupListeners() {
     }
   });
 
+  document.getElementById('profileLink').addEventListener('click', (e) => {
+    e.preventDefault();
+    showProfileModal();
+  });
+
+  document.getElementById('settingsLink').addEventListener('click', (e) => {
+    e.preventDefault();
+    showSettingsModal();
+  });
+
+  document.getElementById('subscriptionLink').addEventListener('click', (e) => {
+    e.preventDefault();
+    showSubModal();
+  });
+
   document.getElementById('adminLink').addEventListener('click', (e) => {
     e.preventDefault();
     window.location.href = '/admin/';
@@ -350,6 +365,87 @@ function setupListeners() {
       lastActivity: firebase.firestore.FieldValue.serverTimestamp(),
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     }).then(() => loadForum()).catch(console.error);
+  });
+
+  document.querySelectorAll('.modal-overlay').forEach(el => {
+    el.addEventListener('click', (e) => {
+      if (e.target === el) el.classList.remove('show');
+    });
+  });
+
+  setupColorPicker('settingsColorGrid', 'settingsNameColor');
+}
+
+function showProfileModal() {
+  const d = currentUserData;
+  document.getElementById('modalDisplayName').textContent = d.username;
+  document.getElementById('modalEmail').textContent = d.email;
+  document.getElementById('modalCredits').textContent = d.credits || 0;
+  document.getElementById('modalLevel').textContent = d.level || 1;
+  document.getElementById('modalXP').textContent = d.xp || 0;
+  const badges = document.getElementById('modalBadges');
+  badges.innerHTML = '';
+  if (d.badges && d.badges.length > 0) {
+    d.badges.forEach(b => {
+      const span = document.createElement('span');
+      span.className = 'badge';
+      span.textContent = b;
+      badges.appendChild(span);
+    });
+  }
+  document.getElementById('profileModal').classList.add('show');
+}
+
+function showSettingsModal() {
+  const d = currentUserData;
+  document.getElementById('settingsNameColor').value = d.nameColor || '#4caf50';
+  document.querySelectorAll('#settingsColorGrid .color-swatch').forEach(s => {
+    s.classList.toggle('selected', s.dataset.color === (d.nameColor || '#4caf50'));
+  });
+  document.getElementById('settingsTheme').value = document.documentElement.getAttribute('data-theme') || 'dark';
+  document.getElementById('settingsStatus').textContent = '';
+  document.getElementById('settingsModal').classList.add('show');
+}
+
+window.saveSettings = async () => {
+  const status = document.getElementById('settingsStatus');
+  const nameColor = document.getElementById('settingsNameColor').value.trim();
+  const theme = document.getElementById('settingsTheme').value;
+  try {
+    await db.collection('users').doc(currentUser.uid).update({ nameColor });
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('vievo-theme', theme);
+    status.textContent = 'Настройките са запазени!';
+    status.style.color = 'var(--accent)';
+    setTimeout(() => closeModal('settingsModal'), 1000);
+    updateUI();
+  } catch (err) {
+    status.textContent = 'Грешка: ' + err.message;
+    status.style.color = 'var(--danger)';
+  }
+};
+
+function showSubModal() {
+  const d = currentUserData;
+  const sub = d.subscription || 'free';
+  const labels = { free: 'Free', plus: 'Plus', pro: 'Pro', ultra: 'Ultra' };
+  const credits = { free: 10, plus: 15, pro: 25, ultra: 40 };
+  document.getElementById('subTierName').textContent = labels[sub] || 'Free';
+  document.getElementById('subCreditsPerDay').textContent = `${credits[sub] || 10} кредита/ден`;
+  document.getElementById('subModal').classList.add('show');
+}
+
+window.closeModal = (id) => {
+  document.getElementById(id).classList.remove('show');
+};
+
+function setupColorPicker(gridId, inputId) {
+  document.getElementById(gridId).addEventListener('click', (e) => {
+    if (e.target.classList.contains('color-swatch')) {
+      document.querySelectorAll(`#${gridId} .color-swatch`).forEach(s => s.classList.remove('selected'));
+      e.target.classList.add('selected');
+      document.getElementById(inputId).value = e.target.dataset.color;
+    }
   });
 }
 

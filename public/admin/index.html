@@ -26,7 +26,6 @@
       <a href="#admin-approvals" class="admin-nav-item" data-tab="approvals">Одобрения</a>
       <a href="#admin-ads" class="admin-nav-item" data-tab="ads">Реклами</a>
       <a href="#admin-subscriptions" class="admin-nav-item" data-tab="subscriptions">Абонаменти</a>
-      <a href="#admin-credits" class="admin-nav-item" data-tab="credits">Кредити</a>
       <a href="#admin-events" class="admin-nav-item" data-tab="events">Събития</a>
     </aside>
 
@@ -115,22 +114,6 @@
         <div id="subscriptionsList" class="admin-list"></div>
       </div>
 
-      <div id="admin-credits" class="admin-tab">
-        <h2>Управление на кредити</h2>
-        <div class="admin-form">
-          <select id="creditUserSelect">
-            <option value="">Избери потребител...</option>
-          </select>
-          <input type="number" id="creditAmount" placeholder="Количество" min="1">
-          <select id="creditAction">
-            <option value="add">Добави</option>
-            <option value="remove">Премахни</option>
-          </select>
-          <button class="btn btn-primary" id="manageCreditsBtn">Изпълни</button>
-          <p id="creditStatus" class="status-msg"></p>
-        </div>
-      </div>
-
       <div id="admin-events" class="admin-tab">
         <h2>Събития</h2>
         <div class="admin-form">
@@ -143,6 +126,61 @@
         <div id="eventsList" class="admin-list"></div>
       </div>
     </main>
+  </div>
+
+  <!-- Edit User Modal -->
+  <div class="modal-overlay" id="editUserModal">
+    <div class="modal" style="position:relative">
+      <div class="modal-header">
+        <h2>Редактиране на потребител</h2>
+        <button class="modal-close" onclick="closeEditModal()">&times;</button>
+      </div>
+      <div class="form-group">
+        <label>Потребителско име</label>
+        <input type="text" id="editUsername" placeholder="Име">
+      </div>
+      <div class="form-group">
+        <label>Роля</label>
+        <select id="editRole">
+          <option value="user">User</option>
+          <option value="admin">Admin</option>
+          <option value="owner">Owner</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Абонамент</label>
+        <select id="editSubscription">
+          <option value="free">Free</option>
+          <option value="plus">Plus</option>
+          <option value="pro">Pro</option>
+          <option value="ultra">Ultra</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Кредити</label>
+        <input type="number" id="editCredits" placeholder="0" min="0">
+      </div>
+      <div class="form-group">
+        <label>Цвят на име</label>
+        <input type="text" id="editNameColor" placeholder="#4caf50">
+        <div class="color-grid">
+          <div class="color-swatch selected" style="background:#4caf50" data-color="#4caf50"></div>
+          <div class="color-swatch" style="background:#ff6b6b" data-color="#ff6b6b"></div>
+          <div class="color-swatch" style="background:#42a5f5" data-color="#42a5f5"></div>
+          <div class="color-swatch" style="background:#ffd700" data-color="#ffd700"></div>
+          <div class="color-swatch" style="background:#ab47bc" data-color="#ab47bc"></div>
+          <div class="color-swatch" style="background:#ffa726" data-color="#ffa726"></div>
+        </div>
+      </div>
+      <div class="form-group" style="display:flex;gap:1rem;align-items:center">
+        <label style="margin:0">Одобрен</label>
+        <input type="checkbox" id="editApproved" style="width:auto">
+        <label style="margin:0;margin-left:1rem">Блокиран</label>
+        <input type="checkbox" id="editBanned" style="width:auto">
+      </div>
+      <p id="editUserStatus" class="status-msg"></p>
+      <button class="btn btn-primary" onclick="saveEditUser()">Запази промените</button>
+    </div>
   </div>
 
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
