@@ -134,18 +134,24 @@ async function loadNews() {
   try {
     const snap = await db.collection('news').orderBy('createdAt', 'desc').limit(20).get();
     if (snap.empty) {
-      feed.innerHTML = '<div class="news-placeholder">Все още няма новини.</div>';
+      feed.innerHTML = `<div class="news-card">
+        <h3 style="color:var(--accent)">Добре дошли във Виево банда! 🎉</h3>
+        <div class="news-meta">Администратор • ${new Date().toLocaleString('bg-BG')}</div>
+        <div class="news-content">Това е официалната общност за хората от Виево, Смолян. Тук можеш да играеш игри, да говориш в чата, да създаваш теми във форума и да гледаш предстоящи събития. Приятно прекарване! 🏔️</div>
+      </div>`;
       return;
     }
     feed.innerHTML = '';
-    snap.forEach(doc => {
-      const n = doc.data();
+    const sorted = [];
+    snap.forEach(doc => sorted.push({ id: doc.id, data: doc.data() }));
+    sorted.sort((a, b) => (b.data.pinned ? 1 : 0) - (a.data.pinned ? 1 : 0) || (b.data.createdAt?.toMillis() || 0) - (a.data.createdAt?.toMillis() || 0));
+    sorted.forEach(({ data: n }) => {
       const card = document.createElement('div');
-      card.className = 'news-card';
+      card.className = 'news-card' + (n.pinned ? ' news-pinned' : '');
       const time = n.createdAt ? new Date(n.createdAt.toMillis()).toLocaleString('bg-BG') : '';
       card.innerHTML = `
-        <h3 style="color:${n.authorColor || 'var(--text-primary)'}">${n.title}</h3>
-        <div class="news-meta">${n.author} • ${time}</div>
+        <h3 style="color:${n.authorColor || 'var(--text-primary)'}">${n.pinned ? '📌 ' : ''}${n.title}</h3>
+        <div class="news-meta" style="color:${n.authorColor || 'var(--text-muted)'}">${n.author} • ${time}</div>
         <div class="news-content">${n.content}</div>
       `;
       feed.appendChild(card);
@@ -170,21 +176,36 @@ async function loadForum() {
       return;
     }
     container.innerHTML = '';
-    snap.forEach(doc => {
-      const t = doc.data();
+    const threads = [];
+    snap.forEach(doc => threads.push({ id: doc.id, data: doc.data() }));
+    threads.sort((a, b) => (b.data.pinned ? 1 : 0) - (a.data.pinned ? 1 : 0) || (b.data.lastActivity?.toMillis() || 0) - (a.data.lastActivity?.toMillis() || 0));
+    const isAdmin = currentUserData.role === 'admin' || currentUserData.role === 'owner';
+    threads.forEach(({ id, data: t }) => {
       const thread = document.createElement('div');
-      thread.className = 'forum-thread';
+      thread.className = 'forum-thread' + (t.pinned ? ' forum-pinned' : '');
       thread.innerHTML = `
-        <h4 style="color:${t.authorColor || 'var(--text-primary)'}">${t.title}</h4>
-        <div class="thread-meta">от ${t.author} • ${t.replies || 0} отговора</div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <h4 style="color:${t.authorColor || 'var(--text-primary)'}">${t.pinned ? '📌 ' : ''}${t.title}</h4>
+          ${isAdmin ? `<button class="btn btn-small btn-ghost" onclick="event.stopPropagation();togglePin('${id}', ${!!t.pinned})" style="font-size:0.75rem;padding:0.25rem 0.5rem">${t.pinned ? 'Откачи' : 'Закачи'}</button>` : ''}
+        </div>
+        <div class="thread-meta" style="color:${t.authorColor || 'var(--text-muted)'}">от ${t.author} • ${t.replies || 0} отговора</div>
       `;
-      thread.onclick = () => openThread(doc.id, t);
+      thread.onclick = () => openThread(id, t);
       container.appendChild(thread);
     });
   } catch (err) {
     console.error(err);
   }
 }
+
+window.togglePin = async (id, current) => {
+  try {
+    await db.collection('forum').doc(id).update({ pinned: !current });
+    loadForum();
+  } catch (err) {
+    console.error(err);
+  }
+};
 
 window.openThread = async (id, data) => {
   currentThreadId = id;
@@ -514,6 +535,26 @@ function setupListeners() {
   document.getElementById('dmSendBtn').addEventListener('click', sendDmMessage);
   document.getElementById('dmInput').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') sendDmMessage();
+  });
+
+  document.getElementById('forumReplyBtn').addEventListener('click', () => {
+    const input = document.getElementById('forumReplyInput');
+    const text = input.value.trim();
+    if (!text || !currentThreadId) return;
+    db.collection('forum').doc(currentThreadId).collection('replies').add({
+      author: currentUserData.username,
+      authorColor: currentUserData.nameColor || '#4caf50',
+      authorId: currentUser.uid,
+      text,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    }).then(() => {
+      db.collection('forum').doc(currentThreadId).update({
+        replies: firebase.firestore.FieldValue.increment(1),
+        lastActivity: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      input.value = '';
+      openThread(currentThreadId, currentThreadData);
+    }).catch(console.error);
   });
 
   document.getElementById('forumReplyInput').addEventListener('keydown', (e) => {

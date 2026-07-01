@@ -119,6 +119,8 @@
   border-radius: var(--radius);
 }
 
+.news-pinned, .forum-pinned { border-color: var(--accent) !important; background: var(--accent-glow); }
+
 .news-card {
   background: var(--bg-card);
   backdrop-filter: blur(8px);
