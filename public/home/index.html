@@ -13,7 +13,8 @@
     <div class="nav-brand">Виево <span>банда</span></div>
     <button class="sidebar-toggle mobile-menu-btn" onclick="toggleMobileMenu()">☰</button>
     <div class="nav-links">
-      <a href="/home/#news" class="active" data-section="news">Начало</a>
+      <a href="/home/#landing" class="active" data-section="landing">Начало</a>
+      <a href="/home/#news" data-section="news">Новини</a>
       <a href="/games/" data-section="games">Игри</a>
       <a href="/home/#forum" data-section="forum">Форум</a>
       <a href="/home/#chat" data-section="chat">Чат</a>
@@ -69,17 +70,19 @@
     </aside>
 
     <main class="main-content">
-      <div class="home-hero">
-        <h1 class="home-hero-title">Виево <span>банда</span></h1>
-        <p class="home-hero-sub">Родопска общност за игри, форум и чат</p>
-        <nav class="home-category-nav">
-          <a href="/games/" class="home-category-link">🎮 Игри</a>
-          <a href="/home/#forum" class="home-category-link" onclick="switchSection('forum')">📋 Форум</a>
-          <a href="/home/#chat" class="home-category-link" onclick="switchSection('chat')">💬 Чат</a>
-          <a href="/home/#events" class="home-category-link" onclick="switchSection('events')">📅 Събития</a>
-        </nav>
-      </div>
-      <section id="news" class="content-section active">
+      <section id="landing" class="content-section active">
+        <div class="home-hero">
+          <h1 class="home-hero-title">Виево <span>банда</span></h1>
+          <p class="home-hero-sub">Родопска общност за игри, форум и чат</p>
+          <nav class="home-category-nav">
+            <a href="/games/" class="home-category-link">🎮 Игри</a>
+            <a href="/home/#forum" class="home-category-link" onclick="switchSection('forum')">📋 Форум</a>
+            <a href="/home/#chat" class="home-category-link" onclick="switchSection('chat')">💬 Чат</a>
+            <a href="/home/#events" class="home-category-link" onclick="switchSection('events')">📅 Събития</a>
+          </nav>
+        </div>
+      </section>
+      <section id="news" class="content-section">
         <h2>Новини</h2>
         <div id="newsFeed" class="news-feed">
           <div class="news-placeholder">Все още няма новини.</div>
@@ -265,11 +268,11 @@ function switchSection(section) {
 }
 
 window.addEventListener('hashchange', () => {
-  const section = location.hash.replace('#', '') || 'news';
+  const section = location.hash.replace('#', '') || 'landing';
   switchSection(section);
 });
 
-const initialSection = location.hash.replace('#', '') || 'news';
+const initialSection = location.hash.replace('#', '') || 'landing';
 switchSection(initialSection);
 </script>
 </body>
