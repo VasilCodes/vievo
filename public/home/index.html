@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="bg" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Начало - Виево банда</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../css/home.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-brand">Виево <span>банда</span></div>
+    <div class="nav-links">
+      <a href="/home/" class="active">Начало</a>
+      <a href="/games/">Игри</a>
+      <a href="/home/#forum">Форум</a>
+      <a href="/home/#chat">Чат</a>
+      <a href="/home/#events">Събития</a>
+    </div>
+    <div class="nav-user">
+      <span id="navCredits" class="credits-badge">💰 0</span>
+      <span id="navXP" class="xp-badge">⚡ 0</span>
+      <div class="user-dropdown">
+        <button class="user-btn" id="userBtn">
+          <span id="navDisplayName">Потребител</span>
+          <span class="badge-tier" id="navBadge"></span>
+        </button>
+        <div class="dropdown-menu" id="dropdownMenu">
+          <a href="#" id="profileLink">Профил</a>
+          <a href="#" id="settingsLink">Настройки</a>
+          <a href="#" id="subscriptionLink">Абонамент</a>
+          <hr>
+          <a href="#" id="adminLink" style="display:none">Админ панел</a>
+          <hr>
+          <a href="#" id="logoutBtn">Изход</a>
+        </div>
+      </div>
+      <button class="theme-toggle-small" onclick="toggleTheme()">🌓</button>
+    </div>
+  </nav>
+
+  <div class="home-layout">
+    <aside class="sidebar">
+      <div class="profile-card">
+        <div class="profile-avatar" id="profileAvatar">👤</div>
+        <div class="profile-name" id="profileName">Потребител</div>
+        <div class="profile-info">
+          <span>💰 <span id="profileCredits">0</span> кредита</span>
+          <span>⚡ LVL <span id="profileLevel">1</span></span>
+        </div>
+        <div class="profile-badges" id="profileBadges"></div>
+      </div>
+
+      <div class="sidebar-section">
+        <h3>Онлайн</h3>
+        <div id="onlineUsers" class="online-list">
+          <span class="online-count">0 потребители онлайн</span>
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <h3>Класация</h3>
+        <div id="leaderboardPreview" class="leaderboard-mini">
+          <div class="lb-item">1. Потребител - 100 XP</div>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <section id="news" class="content-section">
+        <h2>Новини</h2>
+        <div id="newsFeed" class="news-feed">
+          <div class="news-placeholder">Все още няма новини.</div>
+        </div>
+      </section>
+
+      <section id="forum" class="content-section">
+        <h2>Форум</h2>
+        <div class="forum-toolbar">
+          <button class="btn btn-primary" id="newPostBtn">+ Нова тема</button>
+        </div>
+        <div id="forumThreads" class="forum-list">
+          <div class="forum-placeholder">Все още няма теми във форума.</div>
+        </div>
+      </section>
+
+      <section id="chat" class="content-section">
+        <h2>Чат</h2>
+        <div id="chatBox" class="chat-box">
+          <div id="chatMessages" class="chat-messages"></div>
+          <div class="chat-input-area">
+            <input type="text" id="chatInput" placeholder="Напиши съобщение..." maxlength="500">
+            <button id="chatSendBtn" class="btn btn-primary">📨</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="events" class="content-section">
+        <h2>Събития</h2>
+        <div id="eventsList" class="events-list">
+          <div class="events-placeholder">Няма предстоящи събития.</div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="ad-banner" id="adBanner">
+    <div id="adPlaceholder">Реклама</div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+  <script src="../js/home.js"></script>
+</body>
+</html>

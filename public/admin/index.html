@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="bg" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Админ панел - Виево банда</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../css/home.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-brand">Виево <span>банда</span> <span class="admin-tag">Admin</span></div>
+    <div class="nav-links">
+      <a href="/home/">Начало</a>
+    </div>
+    <div class="nav-user">
+      <button id="adminLogout" class="btn btn-secondary">Изход</button>
+    </div>
+  </nav>
+
+  <div class="admin-layout">
+    <aside class="admin-sidebar">
+      <a href="#admin-dashboard" class="admin-nav-item active" data-tab="dashboard">Табло</a>
+      <a href="#admin-users" class="admin-nav-item" data-tab="users">Потребители</a>
+      <a href="#admin-news" class="admin-nav-item" data-tab="news">Новини</a>
+      <a href="#admin-approvals" class="admin-nav-item" data-tab="approvals">Одобрения</a>
+      <a href="#admin-ads" class="admin-nav-item" data-tab="ads">Реклами</a>
+      <a href="#admin-subscriptions" class="admin-nav-item" data-tab="subscriptions">Абонаменти</a>
+      <a href="#admin-credits" class="admin-nav-item" data-tab="credits">Кредити</a>
+      <a href="#admin-events" class="admin-nav-item" data-tab="events">Събития</a>
+    </aside>
+
+    <main class="admin-content">
+      <div id="admin-dashboard" class="admin-tab active">
+        <h2>Табло</h2>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <h3>Потребители</h3>
+            <p id="statUsers">0</p>
+          </div>
+          <div class="stat-card">
+            <h3>Чакащи одобрение</h3>
+            <p id="statPending">0</p>
+          </div>
+          <div class="stat-card">
+            <h3>Новини</h3>
+            <p id="statNews">0</p>
+          </div>
+          <div class="stat-card">
+            <h3>Абонаменти</h3>
+            <p id="statSubs">0</p>
+          </div>
+        </div>
+      </div>
+
+      <div id="admin-users" class="admin-tab">
+        <h2>Потребители</h2>
+        <div class="admin-search">
+          <input type="text" id="userSearch" placeholder="Търси потребител...">
+        </div>
+        <div class="admin-table-wrapper">
+          <table class="admin-table" id="usersTable">
+            <thead>
+              <tr>
+                <th>Име</th>
+                <th>Имейл</th>
+                <th>Роля</th>
+                <th>Абонамент</th>
+                <th>Кредити</th>
+                <th>Статус</th>
+                <th>Действия</th>
+              </tr>
+            </thead>
+            <tbody id="usersTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="admin-news" class="admin-tab">
+        <h2>Новини</h2>
+        <div class="admin-form">
+          <input type="text" id="newsTitle" placeholder="Заглавие">
+          <textarea id="newsContent" placeholder="Съдържание..."></textarea>
+          <div class="form-actions">
+            <button class="btn btn-primary" id="publishNewsBtn">Публикувай</button>
+          </div>
+          <p id="newsStatus" class="status-msg"></p>
+        </div>
+        <div id="newsList" class="admin-list"></div>
+      </div>
+
+      <div id="admin-approvals" class="admin-tab">
+        <h2>Чакащи одобрение</h2>
+        <div id="pendingUsers" class="admin-list"></div>
+      </div>
+
+      <div id="admin-ads" class="admin-tab">
+        <h2>Реклами</h2>
+        <div class="admin-form">
+          <input type="text" id="adTitle" placeholder="Име на рекламата">
+          <input type="url" id="adImageUrl" placeholder="URL на изображение/GIF">
+          <input type="url" id="adLinkUrl" placeholder="Link (optional)">
+          <select id="adType">
+            <option value="internal">Вътрешна</option>
+            <option value="adsense">Google AdSense код</option>
+          </select>
+          <button class="btn btn-primary" id="addAdBtn">Добави реклама</button>
+          <p id="adStatus" class="status-msg"></p>
+        </div>
+        <div id="adsList" class="admin-list"></div>
+      </div>
+
+      <div id="admin-subscriptions" class="admin-tab">
+        <h2>Абонаменти</h2>
+        <div id="subscriptionsList" class="admin-list"></div>
+      </div>
+
+      <div id="admin-credits" class="admin-tab">
+        <h2>Управление на кредити</h2>
+        <div class="admin-form">
+          <select id="creditUserSelect">
+            <option value="">Избери потребител...</option>
+          </select>
+          <input type="number" id="creditAmount" placeholder="Количество" min="1">
+          <select id="creditAction">
+            <option value="add">Добави</option>
+            <option value="remove">Премахни</option>
+          </select>
+          <button class="btn btn-primary" id="manageCreditsBtn">Изпълни</button>
+          <p id="creditStatus" class="status-msg"></p>
+        </div>
+      </div>
+
+      <div id="admin-events" class="admin-tab">
+        <h2>Събития</h2>
+        <div class="admin-form">
+          <input type="text" id="eventTitle" placeholder="Заглавие">
+          <input type="date" id="eventDate">
+          <textarea id="eventDescription" placeholder="Описание..."></textarea>
+          <button class="btn btn-primary" id="addEventBtn">Добави събитие</button>
+          <p id="eventStatus" class="status-msg"></p>
+        </div>
+        <div id="eventsList" class="admin-list"></div>
+      </div>
+    </main>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+  <script src="../js/admin.js"></script>
+</body>
+</html>

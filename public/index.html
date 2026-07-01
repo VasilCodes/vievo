@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="bg" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Виево банда</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="landing">
+    <div class="landing-content">
+      <div class="logo">Виево <span>банда</span></div>
+      <p class="tagline">Единство, игри и родопски дух</p>
+      <div class="landing-buttons">
+        <a href="login/" class="btn btn-primary">Влез</a>
+        <a href="signup/" class="btn btn-secondary">Регистрация</a>
+      </div>
+    </div>
+    <div class="theme-toggle" onclick="toggleTheme()">🌓</div>
+  </div>
+
+  <script>
+    function toggleTheme() {
+      const html = document.documentElement;
+      const current = html.getAttribute('data-theme');
+      html.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
+      localStorage.setItem('vievo-theme', html.getAttribute('data-theme'));
+    }
+
+    (function() {
+      const saved = localStorage.getItem('vievo-theme');
+      if (saved) document.documentElement.setAttribute('data-theme', saved);
+    })();
+  </script>
+</body>
+</html>

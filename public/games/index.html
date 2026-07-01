@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="bg" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Игри - Виево банда</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../css/games.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-brand">Виево <span>банда</span></div>
+    <div class="nav-links">
+      <a href="/home/">Начало</a>
+      <a href="/games/" class="active">Игри</a>
+    </div>
+    <div class="nav-user">
+      <span id="navCredits" class="credits-badge">💰 0</span>
+      <button class="user-btn" onclick="window.location='/home/'">Назад</button>
+    </div>
+  </nav>
+
+  <div class="games-layout">
+    <div class="games-header">
+      <h1>Игри</h1>
+      <p>Избери игра и се забавлявай!</p>
+    </div>
+
+    <div class="games-grid">
+      <a href="/games/veso-simulator/" class="game-card">
+        <div class="game-card-image">
+          <div class="game-icon">🎮</div>
+        </div>
+        <div class="game-card-info">
+          <h3>Весо симулатор</h3>
+          <p>Симулатор на Весо</p>
+          <div class="game-card-stats">
+            <span>⭐ 0</span>
+            <span>👤 0 играчи</span>
+          </div>
+        </div>
+      </a>
+
+      <a href="/games/byagai-ot-koce-kisyov/" class="game-card">
+        <div class="game-card-image">
+          <div class="game-icon">🏃</div>
+        </div>
+        <div class="game-card-info">
+          <h3>Бягай от Коце Кисиов</h3>
+          <p>Успей да избягаш!</p>
+          <div class="game-card-stats">
+            <span>⭐ 0</span>
+            <span>👤 0 играчи</span>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <div class="games-leaderboard">
+      <h2>Класация</h2>
+      <div id="gamesLeaderboard" class="leaderboard">
+        <p class="leaderboard-placeholder">Все още няма резултати.</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="../js/index.js"></script>
+</body>
+</html>

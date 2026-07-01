@@ -1,0 +1,108 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper: check if authenticated
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    // Helper: get user role
+    function getUserRole(uid) {
+      return get(/databases/$(database)/documents/users/$(uid)).data.role;
+    }
+
+    // Helper: check if user is approved
+    function isApproved(uid) {
+      return get(/databases/$(database)/documents/users/$(uid)).data.approved == true;
+    }
+
+    // Users collection
+    match /users/{userId} {
+      // Anyone can create their own profile on signup
+      allow create: if isAuth() && request.auth.uid == userId
+        && request.resource.data.username is string
+        && request.resource.data.email is string
+        && request.resource.data.role == 'user';
+
+      // Users can read any profile
+      allow read: if isAuth();
+
+      // Users can update their own non-sensitive fields
+      allow update: if isAuth() && request.auth.uid == userId
+        && request.resource.data.role == get(/databases/$(database)/documents/users/$(userId)).data.role
+        && (!request.resource.data.approved || request.resource.data.approved == get(/databases/$(database)/documents/users/$(userId)).data.approved)
+        && (!request.resource.data.banned || request.resource.data.banned == get(/databases/$(database)/documents/users/$(userId)).data.banned);
+
+      // Admins and owners can update any user
+      allow update: if isAuth()
+        && (getUserRole(request.auth.uid) == 'admin' || getUserRole(request.auth.uid) == 'owner');
+
+      // Only owner can delete users
+      allow delete: if isAuth() && getUserRole(request.auth.uid) == 'owner';
+    }
+
+    // News collection
+    match /news/{newsId} {
+      allow read: if isAuth();
+      allow create: if isAuth()
+        && (getUserRole(request.auth.uid) == 'admin' || getUserRole(request.auth.uid) == 'owner');
+      allow update, delete: if isAuth()
+        && (getUserRole(request.auth.uid) == 'admin' || getUserRole(request.auth.uid) == 'owner');
+    }
+
+    // Forum collection
+    match /forum/{threadId} {
+      allow read: if isAuth();
+      allow create: if isAuth() && isApproved(request.auth.uid);
+      allow update: if isAuth()
+        && (request.auth.uid == resource.data.authorId
+          || getUserRole(request.auth.uid) == 'admin'
+          || getUserRole(request.auth.uid) == 'owner');
+      allow delete: if isAuth()
+        && (getUserRole(request.auth.uid) == 'admin'
+          || getUserRole(request.auth.uid) == 'owner');
+    }
+
+    // Forum replies (subcollection)
+    match /forum/{threadId}/replies/{replyId} {
+      allow read: if isAuth();
+      allow create: if isAuth() && isApproved(request.auth.uid);
+      allow delete: if isAuth()
+        && (getUserRole(request.auth.uid) == 'admin'
+          || getUserRole(request.auth.uid) == 'owner');
+    }
+
+    // Chat collection
+    match /chat/{messageId} {
+      allow read: if isAuth();
+      allow create: if isAuth() && isApproved(request.auth.uid)
+        && request.resource.data.userId == request.auth.uid;
+      allow delete: if isAuth()
+        && (getUserRole(request.auth.uid) == 'admin'
+          || getUserRole(request.auth.uid) == 'owner');
+    }
+
+    // Events collection
+    match /events/{eventId} {
+      allow read: if isAuth();
+      allow create, update, delete: if isAuth()
+        && (getUserRole(request.auth.uid) == 'admin'
+          || getUserRole(request.auth.uid) == 'owner');
+    }
+
+    // Ads collection
+    match /ads/{adId} {
+      allow read: if true;
+      allow create, update, delete: if isAuth()
+        && (getUserRole(request.auth.uid) == 'admin'
+          || getUserRole(request.auth.uid) == 'owner');
+    }
+
+    // Deny everything else
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
