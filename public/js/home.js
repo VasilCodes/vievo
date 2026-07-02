@@ -53,6 +53,7 @@ auth.onAuthStateChanged(async (user) => {
     loadEvents();
     loadLeaderboard();
     setupListeners();
+    trackPresence();
   } catch (err) {
     console.error(err);
   }
@@ -65,13 +66,13 @@ function showNotification(message, type = 'success') {
   const toast = document.createElement('div');
   toast.className = `toast ${type}`;
   
-  let icon = '📢';
-  if (type === 'success') icon = '✅';
-  else if (type === 'error') icon = '❌';
-  else if (type === 'info') icon = 'ℹ️';
-  else if (type === 'warn') icon = '⚠️';
+  let icon = '<i class="fas fa-bullhorn"></i>';
+  if (type === 'success') icon = '<i class="fas fa-check-circle"></i>';
+  else if (type === 'error') icon = '<i class="fas fa-exclamation-circle"></i>';
+  else if (type === 'info') icon = '<i class="fas fa-info-circle"></i>';
+  else if (type === 'warn') icon = '<i class="fas fa-exclamation-triangle"></i>';
 
-  toast.innerHTML = `<span>${icon}</span> <span>${message}</span>`;
+  toast.innerHTML = `${icon} <span>${message}</span>`;
   container.appendChild(toast);
   
   setTimeout(() => {
@@ -114,15 +115,15 @@ async function rewardXPAndCredits(xpAmount, creditsAmount, reason) {
     updateUI();
     
     if (creditsAmount > 0) {
-      showNotification(`Получи +${creditsAmount} 💰 и +${xpAmount} XP (${reason})`, 'success');
+      showNotification(`Получи +${creditsAmount} <i class="fas fa-coins"></i> и +${xpAmount} XP (${reason})`, 'success');
     } else if (creditsAmount < 0) {
-      showNotification(`Използвани ${Math.abs(creditsAmount)} 💰. Получи +${xpAmount} XP (${reason})`, 'info');
+      showNotification(`Използвани ${Math.abs(creditsAmount)} <i class="fas fa-coins"></i>. Получи +${xpAmount} XP (${reason})`, 'info');
     } else if (xpAmount > 0) {
       showNotification(`Получи +${xpAmount} XP (${reason})`, 'success');
     }
 
     if (leveledUp) {
-      showNotification(`🎉 Честито! Достигна ниво ${newLevel} и получи бонус от ${newLevel * 50} 💰!`, 'success');
+      showNotification(`🎉 Честито! Достигна ниво ${newLevel} и получи бонус от ${newLevel * 50} <i class="fas fa-coins"></i>!`, 'success');
     }
   } catch (err) {
     console.error('Грешка при актуализиране на XP/Кредити:', err);
@@ -154,7 +155,7 @@ async function checkDailyCredits() {
     currentUserData.lastDailyCheck = today;
     updateUI();
     
-    showNotification(`💰 Всекидневен бонус: Получи ${amount} кредита за твоя абонамент!`, 'success');
+    showNotification(`<i class="fas fa-coins"></i> Всекидневен бонус: Получи ${amount} кредита за твоя абонамент!`, 'success');
   } catch (err) {
     console.error('Грешка при зареждане на всекидневен бонус:', err);
   }
@@ -163,8 +164,8 @@ async function checkDailyCredits() {
 function updateUI() {
   const d = currentUserData;
   document.getElementById('navDisplayName').textContent = d.username;
-  document.getElementById('navCredits').textContent = `💰 ${d.credits || 0}`;
-  document.getElementById('navXP').textContent = `⚡ ${d.xp || 0}`;
+  document.getElementById('navCredits').innerHTML = `<i class="fas fa-coins"></i> ${d.credits || 0}`;
+  document.getElementById('navXP').innerHTML = `<i class="fas fa-bolt"></i> ${d.xp || 0}`;
   document.getElementById('profileName').textContent = d.username;
   document.getElementById('profileCredits').textContent = d.credits || 0;
   document.getElementById('profileLevel').textContent = d.level || 1;
@@ -609,6 +610,13 @@ function setupListeners() {
 
   document.getElementById('logoutBtn').addEventListener('click', async (e) => {
     e.preventDefault();
+    if (currentUser) {
+      try {
+        await db.collection('users').doc(currentUser.uid).update({ online: false });
+      } catch (err) {
+        console.error(err);
+      }
+    }
     await auth.signOut();
     window.location.href = '/login/';
   });
@@ -840,4 +848,55 @@ function toggleTheme() {
   if (saved) document.documentElement.setAttribute('data-theme', saved);
 })();
 
+function trackPresence() {
+  if (!currentUser) return;
 
+  // Задаване на онлайн статус
+  db.collection('users').doc(currentUser.uid).update({
+    online: true,
+    lastActive: firebase.firestore.FieldValue.serverTimestamp()
+  });
+
+  // Периодично обновяване
+  setInterval(() => {
+    if (currentUser) {
+      db.collection('users').doc(currentUser.uid).update({
+        online: true,
+        lastActive: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    }
+  }, 45000);
+
+  // Маркиране като офлайн при излизане
+  window.addEventListener('beforeunload', () => {
+    db.collection('users').doc(currentUser.uid).update({
+      online: false
+    });
+  });
+
+  // Слушане за потребители онлайн в реално време
+  db.collection('users')
+    .where('online', '==', true)
+    .onSnapshot((snap) => {
+      const container = document.getElementById('onlineUsers');
+      if (!container) return;
+      container.innerHTML = `<span class="online-count">${snap.size} потребители онлайн</span>`;
+
+      snap.forEach(doc => {
+        const u = doc.data();
+        const userDiv = document.createElement('div');
+        userDiv.className = 'online-user-item';
+        userDiv.style.display = 'flex';
+        userDiv.style.alignItems = 'center';
+        userDiv.style.gap = '0.4rem';
+        userDiv.style.marginTop = '0.5rem';
+        userDiv.style.fontSize = '0.85rem';
+
+        userDiv.innerHTML = `
+          <span style="width: 8px; height: 8px; border-radius: 50%; background: #2ea043; display: inline-block; box-shadow: 0 0 8px #2ea043;"></span>
+          <span style="color: ${u.nameColor || '#4caf50'}; font-weight: 600;">${u.username}</span>
+        `;
+        container.appendChild(userDiv);
+      });
+    });
+}

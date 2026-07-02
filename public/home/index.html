@@ -6,6 +6,7 @@
   <title>Начало - Виево банда</title>
   <link rel="stylesheet" href="../css/style.css">
   <link rel="stylesheet" href="../css/home.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://www.paypal.com/sdk/js?client-id=sb&currency=EUR" data-sdk-integration-source="button-factory"></script>
 </head>
 <body>
@@ -22,35 +23,35 @@
       <a href="/home/#events" data-section="events">Събития</a>
     </div>
     <div class="nav-user">
-      <span id="navCredits" class="credits-badge">💰 0</span>
-      <span id="navXP" class="xp-badge">⚡ 0</span>
+      <span id="navCredits" class="credits-badge"><i class="fas fa-coins"></i> 0</span>
+      <span id="navXP" class="xp-badge"><i class="fas fa-bolt"></i> 0</span>
       <div class="user-dropdown">
         <button class="user-btn" id="userBtn">
           <span id="navDisplayName">Потребител</span>
           <span class="badge-tier" id="navBadge"></span>
         </button>
         <div class="dropdown-menu" id="dropdownMenu">
-          <a href="#" id="profileLink"><span class="icon">👤</span> Профил</a>
-          <a href="#" id="settingsLink"><span class="icon">⚙️</span> Настройки</a>
-          <a href="#" id="subscriptionLink"><span class="icon">💎</span> Абонамент</a>
+          <a href="#" id="profileLink"><span class="icon"><i class="fas fa-user"></i></span> Профил</a>
+          <a href="#" id="settingsLink"><span class="icon"><i class="fas fa-cog"></i></span> Настройки</a>
+          <a href="#" id="subscriptionLink"><span class="icon"><i class="fas fa-gem"></i></span> Абонамент</a>
           <hr>
-          <a href="#" id="adminLink" style="display:none"><span class="icon">🛡️</span> Админ панел</a>
+          <a href="#" id="adminLink" style="display:none"><span class="icon"><i class="fas fa-shield-alt"></i></span> Админ панел</a>
           <hr>
-          <a href="#" id="logoutBtn"><span class="icon">🚪</span> Изход</a>
+          <a href="#" id="logoutBtn"><span class="icon"><i class="fas fa-sign-out-alt"></i></span> Изход</a>
         </div>
       </div>
-      <button class="theme-toggle-small" onclick="toggleTheme()">🌓</button>
+      <button class="theme-toggle-small" onclick="toggleTheme()"><i class="fas fa-adjust"></i></button>
     </div>
   </nav>
 
   <div class="home-layout">
     <aside class="sidebar">
       <div class="profile-card">
-        <div class="profile-avatar" id="profileAvatar">👤</div>
+        <div class="profile-avatar" id="profileAvatar"><i class="fas fa-user-circle" style="font-size: 2rem;"></i></div>
         <div class="profile-name" id="profileName">Потребител</div>
         <div class="profile-info">
-          <span>💰 <span id="profileCredits">0</span> кредита</span>
-          <span>⚡ LVL <span id="profileLevel">1</span></span>
+          <span><i class="fas fa-coins"></i> <span id="profileCredits">0</span> кредита</span>
+          <span><i class="fas fa-bolt"></i> LVL <span id="profileLevel">1</span></span>
         </div>
         <div class="profile-badges" id="profileBadges"></div>
       </div>
@@ -76,10 +77,10 @@
           <h1 class="home-hero-title">Виево <span>банда</span></h1>
           <p class="home-hero-sub">Родопска общност за игри, форум и чат</p>
           <nav class="home-category-nav">
-            <a href="/games/" class="home-category-link">🎮 Игри</a>
-            <a href="/home/#forum" class="home-category-link" onclick="switchSection('forum')">📋 Форум</a>
-            <a href="/home/#chat" class="home-category-link" onclick="switchSection('chat')">💬 Чат</a>
-            <a href="/home/#events" class="home-category-link" onclick="switchSection('events')">📅 Събития</a>
+            <a href="/games/" class="home-category-link"><i class="fas fa-gamepad"></i> Игри</a>
+            <a href="/home/#forum" class="home-category-link" onclick="switchSection('forum')"><i class="fas fa-clipboard-list"></i> Форум</a>
+            <a href="/home/#chat" class="home-category-link" onclick="switchSection('chat')"><i class="fas fa-comments"></i> Чат</a>
+            <a href="/home/#events" class="home-category-link" onclick="switchSection('events')"><i class="fas fa-calendar-alt"></i> Събития</a>
           </nav>
         </div>
       </section>
@@ -179,14 +180,14 @@
       <button class="modal-close" onclick="closeModal('profileModal')">&times;</button>
       <h2>Моят профил</h2>
       <div style="text-align:center;margin-bottom:1.5rem">
-        <div style="font-size:3rem;margin-bottom:0.5rem" id="modalAvatar">👤</div>
+        <div style="font-size:3rem;margin-bottom:0.5rem" id="modalAvatar"><i class="fas fa-user-circle"></i></div>
         <div style="font-size:1.2rem;font-weight:700" id="modalDisplayName">—</div>
         <div style="font-size:0.85rem;color:var(--text-muted)" id="modalEmail">—</div>
       </div>
       <div class="profile-info" style="justify-content:center;margin-bottom:1rem">
-        <span>💰 <span id="modalCredits">0</span> кредита</span>
-        <span>⚡ LVL <span id="modalLevel">1</span></span>
-        <span>🏆 <span id="modalXP">0</span> XP</span>
+        <span><i class="fas fa-coins"></i> <span id="modalCredits">0</span> кредита</span>
+        <span><i class="fas fa-bolt"></i> LVL <span id="modalLevel">1</span></span>
+        <span><i class="fas fa-trophy"></i> <span id="modalXP">0</span> XP</span>
       </div>
       <div id="modalBadges" style="display:flex;gap:0.3rem;flex-wrap:wrap;justify-content:center"></div>
     </div>
