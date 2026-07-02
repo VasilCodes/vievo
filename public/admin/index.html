@@ -66,6 +66,7 @@
                 <th>Роля</th>
                 <th>Абонамент</th>
                 <th>Кредити</th>
+                <th>HP</th>
                 <th>Статус</th>
                 <th>Действия</th>
               </tr>
@@ -170,6 +171,14 @@
           <div class="color-swatch" style="background:#ffd700" data-color="#ffd700"></div>
           <div class="color-swatch" style="background:#ab47bc" data-color="#ab47bc"></div>
           <div class="color-swatch" style="background:#ffa726" data-color="#ffa726"></div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>HP</label>
+        <div style="display:flex;gap:0.5rem;align-items:center">
+          <input type="number" id="editHp" placeholder="HP" min="0" style="flex:1">
+          <span style="color:var(--text-muted)">/</span>
+          <input type="number" id="editMaxHp" placeholder="Max HP" min="1" style="flex:1">
         </div>
       </div>
       <div class="form-group" style="display:flex;gap:1rem;align-items:center">

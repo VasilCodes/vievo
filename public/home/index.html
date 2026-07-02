@@ -52,6 +52,7 @@
         <div class="profile-info">
           <span><i class="fas fa-coins"></i> <span id="profileCredits">0</span> кредита</span>
           <span><i class="fas fa-bolt"></i> LVL <span id="profileLevel">1</span></span>
+          <span><i class="fas fa-heart"></i> <span id="profileHp">100</span>/<span id="profileMaxHp">100</span></span>
         </div>
         <div class="profile-badges" id="profileBadges"></div>
       </div>
@@ -68,6 +69,7 @@
         <div id="leaderboardPreview" class="leaderboard-mini">
           <div class="lb-item">1. Потребител - 100 XP</div>
         </div>
+        <button class="btn btn-ghost btn-sm" onclick="openFullLeaderboard()" style="width:100%;margin-top:0.5rem;font-size:0.78rem">Виж всички</button>
       </div>
     </aside>
 
@@ -136,6 +138,17 @@
 
   <div class="ad-banner" id="adBanner">
     <div id="adPlaceholder">Реклама</div>
+  </div>
+
+  <!-- Leaderboard Modal -->
+  <div class="modal-overlay" id="leaderboardModal">
+    <div class="modal" style="position:relative;max-width:500px">
+      <div class="modal-header">
+        <h2>Класация</h2>
+        <button class="modal-close" onclick="closeModal('leaderboardModal')">&times;</button>
+      </div>
+      <div id="fullLeaderboard" class="admin-list" style="max-height:400px;overflow-y:auto"></div>
+    </div>
   </div>
 
   <!-- Forum Thread Modal -->

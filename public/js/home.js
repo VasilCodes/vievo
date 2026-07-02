@@ -146,16 +146,25 @@ async function checkDailyCredits() {
   const newCredits = (currentUserData.credits || 0) + amount;
   
   try {
+    const currentHp = currentUserData.hp ?? 100;
+    const maxHp = currentUserData.maxHp ?? 100;
+    const hpRegen = Math.min(20, maxHp - currentHp);
+    const newHp = currentHp + hpRegen;
+
     await db.collection('users').doc(currentUser.uid).update({
       credits: newCredits,
-      lastDailyCheck: today
+      lastDailyCheck: today,
+      hp: newHp
     });
     
     currentUserData.credits = newCredits;
     currentUserData.lastDailyCheck = today;
+    currentUserData.hp = newHp;
     updateUI();
     
-    showNotification(`<i class="fas fa-coins"></i> Всекидневен бонус: Получи ${amount} кредита за твоя абонамент!`, 'success');
+    let msg = `<i class="fas fa-coins"></i> Всекидневен бонус: Получи ${amount} кредита`;
+    if (hpRegen > 0) msg += ` и +${hpRegen} ❤️`;
+    showNotification(msg, 'success');
   } catch (err) {
     console.error('Грешка при зареждане на всекидневен бонус:', err);
   }
@@ -169,6 +178,8 @@ function updateUI() {
   document.getElementById('profileName').textContent = d.username;
   document.getElementById('profileCredits').textContent = d.credits || 0;
   document.getElementById('profileLevel').textContent = d.level || 1;
+  document.getElementById('profileHp').textContent = d.hp ?? 100;
+  document.getElementById('profileMaxHp').textContent = d.maxHp ?? 100;
 
   const nameColor = d.nameColor || '#4caf50';
   document.getElementById('profileName').style.color = nameColor;
@@ -568,7 +579,8 @@ async function loadLeaderboard() {
       const u = doc.data();
       const item = document.createElement('div');
       item.className = 'lb-item';
-      item.innerHTML = `${rank}. <span style="color:${u.nameColor || '#4caf50'}">${u.username}</span> - ${u.xp || 0} XP`;
+      const hpBar = `<span style="font-size:0.75rem;color:var(--text-muted)">❤️ ${u.hp ?? 100}/${u.maxHp ?? 100}</span>`;
+      item.innerHTML = `${rank}. <span style="color:${u.nameColor || '#4caf50'}">${u.username}</span> ${hpBar} - ${u.xp || 0} XP`;
       container.appendChild(item);
       rank++;
     });
@@ -576,6 +588,34 @@ async function loadLeaderboard() {
     console.error(err);
   }
 }
+
+window.openFullLeaderboard = async () => {
+  const container = document.getElementById('fullLeaderboard');
+  container.innerHTML = 'Зареждане...';
+  document.getElementById('leaderboardModal').classList.add('show');
+  try {
+    const snap = await db.collection('users').orderBy('xp', 'desc').limit(100).get();
+    container.innerHTML = '';
+    let rank = 1;
+    snap.forEach(doc => {
+      const u = doc.data();
+      const div = document.createElement('div');
+      div.className = 'admin-list-item';
+      const hpBar = `<span style="font-size:0.78rem;color:var(--text-muted)">❤️ ${u.hp ?? 100}/${u.maxHp ?? 100}</span>`;
+      div.innerHTML = `
+        <div class="item-info">
+          <strong style="color:${u.nameColor || '#4caf50'}">${rank}. ${u.username}</strong>
+          <div style="font-size:0.82rem;color:var(--text-muted)">⚡ ${u.xp || 0} XP • LVL ${u.level || 1} • ${hpBar}</div>
+        </div>
+      `;
+      container.appendChild(div);
+      rank++;
+    });
+  } catch (err) {
+    container.innerHTML = '<div style="color:var(--danger);padding:1rem">Грешка при зареждане</div>';
+    console.error(err);
+  }
+};
 
 function setupListeners() {
   document.getElementById('userBtn').addEventListener('click', () => {

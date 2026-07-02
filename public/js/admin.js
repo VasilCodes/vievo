@@ -75,6 +75,7 @@ async function loadUsers() {
         <td><span class="badge" style="background:${roleColors[u.role] || '#4caf50'}">${u.role}</span></td>
         <td>${u.subscription || 'free'}</td>
         <td>${u.credits || 0}</td>
+        <td>❤️ ${u.hp ?? 100}/${u.maxHp ?? 100}</td>
         <td>${u.banned ? '🚫' : (u.approved ? '✅' : '⏳')}</td>
         <td>
           <button class="btn btn-small btn-ghost" onclick="openEditUser('${doc.id}')">✏️ Редактирай</button>
@@ -95,6 +96,8 @@ window.openEditUser = async (uid) => {
     document.getElementById('editSubscription').value = u.subscription || 'free';
     document.getElementById('editCredits').value = u.credits || 0;
     document.getElementById('editNameColor').value = u.nameColor || '#4caf50';
+    document.getElementById('editHp').value = u.hp ?? 100;
+    document.getElementById('editMaxHp').value = u.maxHp ?? 100;
     document.getElementById('editApproved').checked = !!u.approved;
     document.getElementById('editBanned').checked = !!u.banned;
     document.getElementById('editUserStatus').textContent = '';
@@ -120,6 +123,8 @@ window.saveEditUser = async () => {
       subscription: document.getElementById('editSubscription').value,
       credits: parseInt(document.getElementById('editCredits').value) || 0,
       nameColor: document.getElementById('editNameColor').value,
+      hp: parseInt(document.getElementById('editHp').value) ?? 100,
+      maxHp: parseInt(document.getElementById('editMaxHp').value) ?? 100,
       approved: document.getElementById('editApproved').checked,
       banned: document.getElementById('editBanned').checked
     });

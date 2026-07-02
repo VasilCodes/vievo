@@ -53,7 +53,9 @@ document.getElementById('signupForm').addEventListener('submit', async (e) => {
       background: '',
       badges: [],
       totalDonationsReceived: 0,
-      totalDonationsGiven: 0
+      totalDonationsGiven: 0,
+      hp: 100,
+      maxHp: 100
     });
 
     await user.sendEmailVerification();
