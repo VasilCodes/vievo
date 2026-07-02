@@ -43,6 +43,7 @@ auth.onAuthStateChanged(async (user) => {
 
     currentUserData = doc.data();
     updateUI();
+    requestBrowserNotificationPermission();
     
     // Всекидневна проверка за кредити според абонамента
     await checkDailyCredits();
@@ -58,6 +59,23 @@ auth.onAuthStateChanged(async (user) => {
     console.error(err);
   }
 });
+
+// Браузърни нотификации
+function sendBrowserNotification(title, body) {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  if (document.hasFocus()) return;
+  try {
+    const n = new Notification(title, { body, icon: '/favicon.ico' });
+    setTimeout(() => n.close(), 5000);
+  } catch (e) { /* ignore */ }
+}
+
+function requestBrowserNotificationPermission() {
+  if (!('Notification' in window)) return;
+  if (Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+}
 
 // Toast Известия
 function showNotification(message, type = 'success') {
@@ -348,39 +366,36 @@ window.closeForumModal = () => {
   currentThreadData = null;
 };
 
+let conversationsUnsubscribe = null;
+
 async function loadConversations() {
   const container = document.getElementById('conversationsList');
-  try {
-    const snap = await db.collection('conversations')
-      .where('participants', 'array-contains', currentUser.uid)
-      .get();
 
-    container.innerHTML = '';
-    if (snap.empty) {
-      container.innerHTML = '<div class="dm-placeholder">Няма разговори</div>';
-      return;
-    }
+  if (conversationsUnsubscribe) conversationsUnsubscribe();
 
-    const convs = [];
-    snap.forEach(doc => convs.push({ id: doc.id, data: doc.data() }));
-    convs.sort((a, b) => {
-      const aTime = a.data.lastActivity ? a.data.lastActivity.toMillis() : 0;
-      const bTime = b.data.lastActivity ? b.data.lastActivity.toMillis() : 0;
-      return bTime - aTime;
+  conversationsUnsubscribe = db.collection('conversations')
+    .where('participants', 'array-contains', currentUser.uid)
+    .orderBy('lastActivity', 'desc')
+    .onSnapshot((snap) => {
+      container.innerHTML = '';
+      if (snap.empty) {
+        container.innerHTML = '<div class="dm-placeholder">Няма разговори</div>';
+        return;
+      }
+
+      snap.forEach(doc => {
+        const conv = doc.data();
+        const otherUid = conv.participants.find(id => id !== currentUser.uid);
+        const partnerName = (conv.partnerNameFor && conv.partnerNameFor[currentUser.uid]) || conv.partnerName || 'Потребител';
+        const div = document.createElement('div');
+        div.className = 'dm-conv-item' + (doc.id === currentConversationId ? ' active' : '');
+        div.innerHTML = '<div class="dm-conv-name">' + partnerName + '</div><div class="dm-conv-preview">' + (conv.lastMessage || '') + '</div>';
+        div.onclick = () => openConversation(doc.id, otherUid, partnerName);
+        container.appendChild(div);
+      });
+    }, (err) => {
+      console.error(err);
     });
-
-    convs.forEach(({ id, data: conv }) => {
-      const otherUid = conv.participants.find(id => id !== currentUser.uid);
-      const partnerName = (conv.partnerNameFor && conv.partnerNameFor[currentUser.uid]) || conv.partnerName || 'Потребител';
-      const div = document.createElement('div');
-      div.className = 'dm-conv-item' + (id === currentConversationId ? ' active' : '');
-      div.innerHTML = '<div class="dm-conv-name">' + partnerName + '</div><div class="dm-conv-preview">' + (conv.lastMessage || '') + '</div>';
-      div.onclick = () => openConversation(id, otherUid, partnerName);
-      container.appendChild(div);
-    });
-  } catch (err) {
-    console.error(err);
-  }
 }
 
 async function openConversation(convId, otherUid, partnerName) {
@@ -410,7 +425,7 @@ async function openConversation(convId, otherUid, partnerName) {
 
     messagesContainer.innerHTML = '';
     snap.forEach(doc => {
-      appendDmMessage(doc.data());
+      appendDmMessage(doc.data(), doc.id);
     });
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
   } catch (err) {
@@ -422,19 +437,71 @@ async function openConversation(convId, otherUid, partnerName) {
     .onSnapshot((snap) => {
       snap.docChanges().forEach(change => {
         if (change.type === 'added') {
-          appendDmMessage(change.doc.data());
+          const m = change.doc.data();
+          appendDmMessage(m, change.doc.id);
           messagesContainer.scrollTop = messagesContainer.scrollHeight;
+          if (m.senderId !== currentUser.uid && !document.hasFocus()) {
+            sendBrowserNotification('Ново съобщение', m.text);
+          }
+        } else if (change.type === 'modified') {
+          const existing = document.getElementById('msg-' + change.doc.id);
+          if (existing) existing.remove();
+          appendDmMessage(change.doc.data(), change.doc.id);
+        } else if (change.type === 'removed') {
+          const existing = document.getElementById('msg-' + change.doc.id);
+          if (existing) existing.remove();
         }
       });
     });
 }
 
-function appendDmMessage(m) {
+function appendDmMessage(m, msgId) {
+  const container = document.getElementById('dmMessages');
   const div = document.createElement('div');
+  div.id = 'msg-' + msgId;
   div.className = 'dm-msg' + (m.senderId === currentUser.uid ? ' dm-msg-own' : '');
+
+  if (m.deleted && m.text === 'Съобщението е изтрито.') {
+    div.className += ' dm-msg-deleted';
+    div.innerHTML = '<div class="dm-msg-text" style="font-style:italic;color:var(--text-muted)"><i class="fas fa-trash"></i> Съобщението е изтрито.</div>';
+    container.appendChild(div);
+    return;
+  }
+
   const time = m.createdAt ? new Date(m.createdAt.toMillis()).toLocaleTimeString('bg-BG') : '';
-  div.innerHTML = '<div class="dm-msg-text">' + m.text + '</div><div class="dm-msg-time">' + time + '</div>';
-  document.getElementById('dmMessages').appendChild(div);
+  const isOwn = m.senderId === currentUser.uid;
+  const deleteBtn = isOwn
+    ? `<button class="dm-msg-delete-btn" onclick="deleteMessage('${msgId}')" title="Изтрий"><i class="fas fa-times"></i></button>`
+    : '';
+  div.innerHTML = '<div class="dm-msg-text">' + m.text + '</div><div class="dm-msg-time">' + time + '</div>' + deleteBtn;
+  container.appendChild(div);
+}
+
+async function deleteMessage(msgId) {
+  if (!currentConversationId || !currentUser) return;
+  const sub = currentUserData.subscription || 'free';
+  const canHardDelete = ['plus', 'pro', 'ultra'].includes(sub);
+
+  if (canHardDelete) {
+    if (!confirm('Наистина ли искаш да изтриеш това съобщение?')) return;
+    try {
+      await db.collection('conversations').doc(currentConversationId).collection('messages').doc(msgId).delete();
+    } catch (err) {
+      console.error(err);
+      showNotification('Грешка при изтриване.', 'error');
+    }
+  } else {
+    if (!confirm('Съобщението ще бъде заменено с "Съобщението е изтрито." за всички. Напред? Абонамент Plus+ премахва следите напълно.')) return;
+    try {
+      await db.collection('conversations').doc(currentConversationId).collection('messages').doc(msgId).update({
+        text: 'Съобщението е изтрито.',
+        deleted: true
+      });
+    } catch (err) {
+      console.error(err);
+      showNotification('Грешка при изтриване.', 'error');
+    }
+  }
 }
 
 async function sendDmMessage() {
