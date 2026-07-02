@@ -89,13 +89,16 @@ const PUSH_WORKER_URL = 'https://push.vievo-community.workers.dev';
 async function registerFcmToken() {
   if (!messaging || !currentUser) return;
   try {
-    const permission = await Notification.requestPermission();
-    if (permission !== 'granted') return;
-    // VAPID key се генерира във Firebase Console > Cloud Messaging > Web Push certificates
+    if (Notification.permission === 'denied' || Notification.permission === 'default') {
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') return;
+    }
     const token = await messaging.getToken();
     await db.collection('users').doc(currentUser.uid).update({ fcmToken: token });
   } catch (err) {
-    console.error('FCM token error:', err);
+    if (err.code !== 'messaging/permission-blocked' && err.code !== 'messaging/notifications-blocked') {
+      console.error('FCM token error:', err);
+    }
   }
 }
 
@@ -465,22 +468,7 @@ async function openConversation(convId, otherUid, partnerName) {
   if (dmUnsubscribe) dmUnsubscribe();
 
   const messagesContainer = document.getElementById('dmMessages');
-  messagesContainer.innerHTML = 'Зареждане...';
-
-  try {
-    const snap = await db.collection('conversations').doc(convId).collection('messages')
-      .orderBy('createdAt', 'asc')
-      .limit(100)
-      .get();
-
-    messagesContainer.innerHTML = '';
-    snap.forEach(doc => {
-      appendDmMessage(doc.data(), doc.id);
-    });
-    messagesContainer.scrollTop = messagesContainer.scrollHeight;
-  } catch (err) {
-    console.error(err);
-  }
+  messagesContainer.innerHTML = '';
 
   dmUnsubscribe = db.collection('conversations').doc(convId).collection('messages')
     .orderBy('createdAt', 'asc')
@@ -733,7 +721,12 @@ window.openFullLeaderboard = async () => {
   }
 };
 
+let listenersInitialized = false;
+
 function setupListeners() {
+  if (listenersInitialized) return;
+  listenersInitialized = true;
+
   document.getElementById('userBtn').addEventListener('click', () => {
     document.getElementById('dropdownMenu').classList.toggle('show');
   });
