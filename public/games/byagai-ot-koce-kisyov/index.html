@@ -10,15 +10,32 @@
   <div class="game-container">
     <div class="game-header">
       <h1>Бягай от Коце Кисиов</h1>
+      <div class="game-stats">
+        <span id="scoreBadge">Разстояние: 0м</span>
+        <span id="creditsBadge">💰 Кредити: 0</span>
+        <span id="xpBadge">⚡ XP: 0</span>
+      </div>
       <a href="/games/" class="btn-back">← Назад</a>
     </div>
-    <div class="game-canvas-wrapper">
+    <div class="game-canvas-wrapper" style="position: relative; overflow: hidden;">
       <canvas id="gameCanvas"></canvas>
+      <div id="player" style="position: absolute; bottom: 20px; left: 50px; font-size: 3rem; user-select: none;">🏃</div>
+      <div id="obstacle" style="position: absolute; bottom: 20px; right: -50px; font-size: 3rem; user-select: none;">👴</div>
+      <div id="gameOverScreen" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.3s;">
+        <h2 style="color: #ef5350; font-size: 2.5rem; margin-bottom: 1rem;">Коце те хвана!</h2>
+        <p style="font-size: 1.2rem; margin-bottom: 1.5rem;" id="gameRewardText">Измина разстояние: 0м</p>
+        <button id="restartBtn" style="padding: 0.75rem 1.5rem; background: #ef5350; color: white; border: none; border-radius: 8px; font-size: 1.1rem; cursor: pointer; font-weight: bold; box-shadow: 0 0 15px rgba(239,83,80,0.4);">Бягай пак!</button>
+      </div>
     </div>
     <div class="game-info">
-      <p>Играта е в процес на разработка. Очаквайте скоро!</p>
+      <p>Натисни <strong>ИНТЕРВАЛ (Space)</strong> или кликни върху екрана, за да скочиш над Коце Кисиов! На всеки 50 метра получаваш 2 💰 и 10 XP!</p>
     </div>
   </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+  <script src="../index.js"></script>
   <script src="script.js"></script>
 </body>
 </html>

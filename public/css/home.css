@@ -374,8 +374,51 @@
 
 /* Subscription Tiers */
 .sub-tier-card { background:var(--bg-card); border:2px solid var(--border); border-radius:var(--radius); padding:1rem; text-align:center; cursor:pointer; transition:all var(--transition); }
-.sub-tier-card:hover { border-color:var(--accent); transform:translateY(-2px); }
-.sub-tier-card.selected { border-color:var(--accent); background:var(--accent-glow); }
+.sub-tier-card:hover { transform:translateY(-2px); }
+.sub-tier-card[data-tier="plus"]:hover, .sub-tier-card[data-tier="plus"].selected { border-color: var(--accent-blue); }
+.sub-tier-card[data-tier="pro"]:hover, .sub-tier-card[data-tier="pro"].selected { border-color: var(--accent); }
+.sub-tier-card[data-tier="ultra"]:hover, .sub-tier-card[data-tier="ultra"].selected { border-color: var(--accent-gold); }
+.sub-tier-card[data-tier="plus"].selected { background: rgba(66, 165, 245, 0.05); }
+.sub-tier-card[data-tier="pro"].selected { background: var(--accent-glow); }
+.sub-tier-card[data-tier="ultra"].selected { background: rgba(255, 215, 0, 0.05); }
+
+/* Toasts / Notifications */
+.toast-container {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 9999;
+}
+.toast {
+  padding: 0.75rem 1.25rem;
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  font-size: 0.88rem;
+  font-weight: 500;
+  box-shadow: 0 4px 12px var(--shadow);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transform: translateY(20px);
+  opacity: 0;
+  animation: toastFadeIn 0.3s forwards, toastFadeOut 0.3s 2.7s forwards;
+}
+.toast.success { border-left: 4px solid var(--accent); }
+.toast.info { border-left: 4px solid var(--accent-blue); }
+.toast.error { border-left: 4px solid var(--danger); }
+.toast.warn { border-left: 4px solid var(--warning); }
+
+@keyframes toastFadeIn {
+  to { transform: translateY(0); opacity: 1; }
+}
+@keyframes toastFadeOut {
+  to { transform: translateY(-20px); opacity: 0; }
+}
 
 .modal-wide { max-width:700px; }
 

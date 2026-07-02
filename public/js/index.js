@@ -10,3 +10,17 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
+
+auth.onAuthStateChanged((user) => {
+  if (user) {
+    db.collection('users').doc(user.uid).onSnapshot((doc) => {
+      if (doc.exists) {
+        const data = doc.data();
+        const creditsEl = document.getElementById('navCredits');
+        const xpEl = document.getElementById('navXP');
+        if (creditsEl) creditsEl.textContent = `💰 ${data.credits || 0}`;
+        if (xpEl) xpEl.textContent = `⚡ ${data.xp || 0}`;
+      }
+    });
+  }
+});

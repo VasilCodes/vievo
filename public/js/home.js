@@ -43,6 +43,10 @@ auth.onAuthStateChanged(async (user) => {
 
     currentUserData = doc.data();
     updateUI();
+    
+    // Всекидневна проверка за кредити според абонамента
+    await checkDailyCredits();
+
     loadNews();
     loadForum();
     loadConversations();
@@ -53,6 +57,108 @@ auth.onAuthStateChanged(async (user) => {
     console.error(err);
   }
 });
+
+// Toast Известия
+function showNotification(message, type = 'success') {
+  const container = document.getElementById('toastContainer');
+  if (!container) return;
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  
+  let icon = '📢';
+  if (type === 'success') icon = '✅';
+  else if (type === 'error') icon = '❌';
+  else if (type === 'info') icon = 'ℹ️';
+  else if (type === 'warn') icon = '⚠️';
+
+  toast.innerHTML = `<span>${icon}</span> <span>${message}</span>`;
+  container.appendChild(toast);
+  
+  setTimeout(() => {
+    toast.remove();
+  }, 3000);
+}
+
+// Система за трупане на XP и промяна на Кредити
+async function rewardXPAndCredits(xpAmount, creditsAmount, reason) {
+  if (!currentUser) return;
+  
+  const currentXP = currentUserData.xp || 0;
+  const newXP = currentXP + xpAmount;
+  const newCredits = (currentUserData.credits || 0) + creditsAmount;
+  
+  // Изчисляване на нива: Level = Math.floor(XP / 100) + 1
+  const currentLevel = currentUserData.level || 1;
+  const newLevel = Math.floor(newXP / 100) + 1;
+  
+  const updates = {
+    xp: newXP,
+    credits: newCredits,
+    level: newLevel
+  };
+
+  let leveledUp = false;
+  if (newLevel > currentLevel) {
+    leveledUp = true;
+    // Бонус при вдигане на ниво!
+    const levelBonus = newLevel * 50;
+    updates.credits += levelBonus;
+  }
+
+  try {
+    await db.collection('users').doc(currentUser.uid).update(updates);
+    currentUserData.xp = updates.xp;
+    currentUserData.credits = updates.credits;
+    currentUserData.level = updates.level;
+    
+    updateUI();
+    
+    if (creditsAmount > 0) {
+      showNotification(`Получи +${creditsAmount} 💰 и +${xpAmount} XP (${reason})`, 'success');
+    } else if (creditsAmount < 0) {
+      showNotification(`Използвани ${Math.abs(creditsAmount)} 💰. Получи +${xpAmount} XP (${reason})`, 'info');
+    } else if (xpAmount > 0) {
+      showNotification(`Получи +${xpAmount} XP (${reason})`, 'success');
+    }
+
+    if (leveledUp) {
+      showNotification(`🎉 Честито! Достигна ниво ${newLevel} и получи бонус от ${newLevel * 50} 💰!`, 'success');
+    }
+  } catch (err) {
+    console.error('Грешка при актуализиране на XP/Кредити:', err);
+  }
+}
+
+// Проверка за всекидневни кредити
+async function checkDailyCredits() {
+  if (!currentUser || !currentUserData) return;
+  
+  const today = new Date().toDateString();
+  const lastCheck = currentUserData.lastDailyCheck;
+  
+  if (lastCheck === today) return; // Вече е взел бонуса за днес
+  
+  const sub = currentUserData.subscription || 'free';
+  const dailyCreditsMap = { free: 10, plus: 15, pro: 25, ultra: 40 };
+  const amount = dailyCreditsMap[sub] || 10;
+  
+  const newCredits = (currentUserData.credits || 0) + amount;
+  
+  try {
+    await db.collection('users').doc(currentUser.uid).update({
+      credits: newCredits,
+      lastDailyCheck: today
+    });
+    
+    currentUserData.credits = newCredits;
+    currentUserData.lastDailyCheck = today;
+    updateUI();
+    
+    showNotification(`💰 Всекидневен бонус: Получи ${amount} кредита за твоя абонамент!`, 'success');
+  } catch (err) {
+    console.error('Грешка при зареждане на всекидневен бонус:', err);
+  }
+}
 
 function updateUI() {
   const d = currentUserData;
@@ -507,21 +613,32 @@ function setupListeners() {
     window.location.href = '/login/';
   });
 
-  document.getElementById('newPostBtn').addEventListener('click', () => {
+  document.getElementById('newPostBtn').addEventListener('click', async () => {
+    if ((currentUserData.credits || 0) < 5) {
+      showNotification('Нямаш достатъчно кредити за създаване на тема! (Необходими: 5 💰)', 'error');
+      showSubModal();
+      return;
+    }
     const title = prompt('Заглавие на темата:');
     if (!title) return;
     const content = prompt('Съдържание:');
     if (!content) return;
-    db.collection('forum').add({
-      title,
-      content,
-      author: currentUserData.username,
-      authorColor: currentUserData.nameColor || '#4caf50',
-      authorId: currentUser.uid,
-      replies: 0,
-      lastActivity: firebase.firestore.FieldValue.serverTimestamp(),
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    }).then(() => loadForum()).catch(console.error);
+    try {
+      await db.collection('forum').add({
+        title,
+        content,
+        author: currentUserData.username,
+        authorColor: currentUserData.nameColor || '#4caf50',
+        authorId: currentUser.uid,
+        replies: 0,
+        lastActivity: firebase.firestore.FieldValue.serverTimestamp(),
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      await rewardXPAndCredits(20, -5, 'Създаване на нова тема във форума');
+      loadForum();
+    } catch(err) {
+      console.error(err);
+    }
   });
 
   document.getElementById('newDmBtn').addEventListener('click', () => {
@@ -533,24 +650,33 @@ function setupListeners() {
     if (e.key === 'Enter') sendDmMessage();
   });
 
-  document.getElementById('forumReplyBtn').addEventListener('click', () => {
+  document.getElementById('forumReplyBtn').addEventListener('click', async () => {
+    if ((currentUserData.credits || 0) < 2) {
+      showNotification('Нямаш достатъчно кредити за отговор! (Необходими: 2 💰)', 'error');
+      showSubModal();
+      return;
+    }
     const input = document.getElementById('forumReplyInput');
     const text = input.value.trim();
     if (!text || !currentThreadId) return;
-    db.collection('forum').doc(currentThreadId).collection('replies').add({
-      author: currentUserData.username,
-      authorColor: currentUserData.nameColor || '#4caf50',
-      authorId: currentUser.uid,
-      text,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    }).then(() => {
-      db.collection('forum').doc(currentThreadId).update({
+    try {
+      await db.collection('forum').doc(currentThreadId).collection('replies').add({
+        author: currentUserData.username,
+        authorColor: currentUserData.nameColor || '#4caf50',
+        authorId: currentUser.uid,
+        text,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      await db.collection('forum').doc(currentThreadId).update({
         replies: firebase.firestore.FieldValue.increment(1),
         lastActivity: firebase.firestore.FieldValue.serverTimestamp()
       });
+      await rewardXPAndCredits(10, -2, 'Добавяне на отговор във форум тема');
       input.value = '';
       openThread(currentThreadId, currentThreadData);
-    }).catch(console.error);
+    } catch(err) {
+      console.error(err);
+    }
   });
 
   document.getElementById('forumReplyInput').addEventListener('keydown', (e) => {
@@ -629,7 +755,12 @@ function showSubModal() {
   document.getElementById('subUpgradeStatus').textContent = '';
   document.getElementById('paypalButtonContainer').innerHTML = '';
   selectedSubTier = null;
-  document.querySelectorAll('.sub-tier-card').forEach(c => c.classList.remove('selected'));
+  document.querySelectorAll('.sub-tier-card').forEach(c => {
+    c.classList.remove('selected');
+    if (c.dataset.tier === sub) {
+      c.classList.add('selected');
+    }
+  });
   document.getElementById('subModal').classList.add('show');
 }
 
