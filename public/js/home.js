@@ -44,6 +44,7 @@ auth.onAuthStateChanged(async (user) => {
     currentUserData = doc.data();
     updateUI();
     requestBrowserNotificationPermission();
+    registerFcmToken();
     
     // Всекидневна проверка за кредити според абонамента
     await checkDailyCredits();
@@ -68,6 +69,49 @@ function sendBrowserNotification(title, body) {
     const n = new Notification(title, { body, icon: '/favicon.ico' });
     setTimeout(() => n.close(), 5000);
   } catch (e) { /* ignore */ }
+}
+
+function requestBrowserNotificationPermission() {
+  if (!('Notification' in window)) return;
+  if (Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+}
+
+// FCM Push известия
+let messaging = null;
+try {
+  if (firebase.messaging) messaging = firebase.messaging();
+} catch (e) { /* not available */ }
+
+const PUSH_WORKER_URL = 'https://push.vievo-community.workers.dev';
+
+async function registerFcmToken() {
+  if (!messaging || !currentUser) return;
+  try {
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') return;
+    // VAPID key се генерира във Firebase Console > Cloud Messaging > Web Push certificates
+    const token = await messaging.getToken();
+    await db.collection('users').doc(currentUser.uid).update({ fcmToken: token });
+  } catch (err) {
+    console.error('FCM token error:', err);
+  }
+}
+
+async function sendPushNotification(targetUid, title, body) {
+  try {
+    const doc = await db.collection('users').doc(targetUid).get();
+    const token = doc.data()?.fcmToken;
+    if (!token) return;
+    await fetch(PUSH_WORKER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, title, body })
+    });
+  } catch (err) {
+    console.error('Push error:', err);
+  }
 }
 
 function requestBrowserNotificationPermission() {
@@ -375,7 +419,6 @@ async function loadConversations() {
 
   conversationsUnsubscribe = db.collection('conversations')
     .where('participants', 'array-contains', currentUser.uid)
-    .orderBy('lastActivity', 'desc')
     .onSnapshot((snap) => {
       container.innerHTML = '';
       if (snap.empty) {
@@ -383,14 +426,21 @@ async function loadConversations() {
         return;
       }
 
-      snap.forEach(doc => {
-        const conv = doc.data();
+      const convs = [];
+      snap.forEach(doc => convs.push({ id: doc.id, data: doc.data() }));
+      convs.sort((a, b) => {
+        const aTime = a.data.lastActivity ? a.data.lastActivity.toMillis() : 0;
+        const bTime = b.data.lastActivity ? b.data.lastActivity.toMillis() : 0;
+        return bTime - aTime;
+      });
+
+      convs.forEach(({ id, data: conv }) => {
         const otherUid = conv.participants.find(id => id !== currentUser.uid);
         const partnerName = (conv.partnerNameFor && conv.partnerNameFor[currentUser.uid]) || conv.partnerName || 'Потребител';
         const div = document.createElement('div');
-        div.className = 'dm-conv-item' + (doc.id === currentConversationId ? ' active' : '');
+        div.className = 'dm-conv-item' + (id === currentConversationId ? ' active' : '');
         div.innerHTML = '<div class="dm-conv-name">' + partnerName + '</div><div class="dm-conv-preview">' + (conv.lastMessage || '') + '</div>';
-        div.onclick = () => openConversation(doc.id, otherUid, partnerName);
+        div.onclick = () => openConversation(id, otherUid, partnerName);
         container.appendChild(div);
       });
     }, (err) => {
@@ -520,6 +570,17 @@ async function sendDmMessage() {
       lastActivity: firebase.firestore.FieldValue.serverTimestamp()
     });
     input.value = '';
+
+    // Push notification to the other user
+    try {
+      const convDoc = await db.collection('conversations').doc(currentConversationId).get();
+      const conv = convDoc.data();
+      const otherUid = conv.participants.find(id => id !== currentUser.uid);
+      if (otherUid) {
+        const partnerName = (conv.partnerNameFor && conv.partnerNameFor[otherUid]) || currentUserData.username;
+        sendPushNotification(otherUid, `Ново съобщение от ${partnerName}`, text);
+      }
+    } catch (e) { /* ignore */ }
   } catch (err) {
     console.error(err);
   }
@@ -581,6 +642,7 @@ async function startConversation(otherUid, otherName) {
         ['partnerNameFor.' + otherUid]: currentUserData.username
       });
       openConversation(ref.id, otherUid, otherName);
+      sendPushNotification(otherUid, `${currentUserData.username} започна разговор с теб`, '');
     }
     loadConversations();
   } catch (err) {
@@ -776,6 +838,12 @@ function setupListeners() {
       await rewardXPAndCredits(10, -2, 'Добавяне на отговор във форум тема');
       input.value = '';
       openThread(currentThreadId, currentThreadData);
+
+      // Push notification to thread author
+      if (currentThreadData && currentThreadData.authorId !== currentUser.uid) {
+        sendPushNotification(currentThreadData.authorId, 'Нов отговор във форума',
+          `${currentUserData.username} отговори на "${currentThreadData.title}"`);
+      }
     } catch(err) {
       console.error(err);
     }

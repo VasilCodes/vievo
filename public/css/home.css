@@ -360,6 +360,11 @@
 .dm-msg-own { align-self:flex-end; background:var(--accent-glow); border:1px solid rgba(46,160,67,0.3); }
 .dm-msg-text { font-size:0.9rem; }
 .dm-msg-time { font-size:0.68rem; color:var(--text-muted); margin-top:0.15rem; text-align:right; }
+.dm-msg { position:relative; }
+.dm-msg-delete-btn { position:absolute; top:2px; right:2px; background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:0.7rem; opacity:0; transition:opacity 0.2s; padding:2px 4px; border-radius:3px; }
+.dm-msg:hover .dm-msg-delete-btn { opacity:1; }
+.dm-msg-delete-btn:hover { color:var(--danger); background:rgba(255,255,255,0.1); }
+.dm-msg-deleted { opacity:0.6; }
 .dm-input-area { display:flex; gap:0.5rem; padding:0.5rem 1rem; border-top:1px solid var(--border); background:var(--bg-secondary); }
 .dm-input-area input { flex:1; padding:0.6rem 0.75rem; border:1.5px solid var(--border); border-radius:var(--radius-sm); background:var(--bg-primary); color:var(--text-primary); font-size:0.88rem; }
 .dm-input-area input:focus { outline:none; border-color:var(--accent); }
