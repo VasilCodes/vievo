@@ -13,7 +13,7 @@ function draw() {
   ctx.fillStyle = '#ef5350';
   ctx.font = '20px sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText('🚧 В процес на разработка', canvas.width / 2, canvas.height / 2);
+  ctx.fillText('🔧 В процес на разработка', canvas.width / 2, canvas.height / 2);
 }
 
 draw();

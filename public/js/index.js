@@ -18,8 +18,8 @@ auth.onAuthStateChanged((user) => {
         const data = doc.data();
         const creditsEl = document.getElementById('navCredits');
         const xpEl = document.getElementById('navXP');
-        if (creditsEl) creditsEl.textContent = `💰 ${data.credits || 0}`;
-        if (xpEl) xpEl.textContent = `⚡ ${data.xp || 0}`;
+        if (creditsEl) creditsEl.innerHTML = `<i class="fas fa-coins"></i> ${data.credits || 0}`;
+        if (xpEl) xpEl.innerHTML = `<i class="fas fa-bolt"></i> ${data.xp || 0}`;
       }
     });
   }

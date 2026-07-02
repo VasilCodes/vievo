@@ -75,10 +75,10 @@ async function loadUsers() {
         <td><span class="badge" style="background:${roleColors[u.role] || '#4caf50'}">${u.role}</span></td>
         <td>${u.subscription || 'free'}</td>
         <td>${u.credits || 0}</td>
-        <td>❤️ ${u.hp ?? 100}/${u.maxHp ?? 100}</td>
-        <td>${u.banned ? '🚫' : (u.approved ? '✅' : '⏳')}</td>
+        <td><i class="fas fa-heart" style="color:#e91e63"></i> ${u.hp ?? 100}/${u.maxHp ?? 100}</td>
+        <td>${u.banned ? '<i class="fas fa-ban" style="color:#ef5350"></i>' : (u.approved ? '<i class="fas fa-check-circle" style="color:#4caf50"></i>' : '<i class="fas fa-hourglass-half" style="color:#ff9800"></i>')}</td>
         <td>
-          <button class="btn btn-small btn-ghost" onclick="openEditUser('${doc.id}')">✏️ Редактирай</button>
+          <button class="btn btn-small btn-ghost" onclick="openEditUser('${doc.id}')"><i class="fas fa-edit"></i> Редактирай</button>
         </td>
       `;
       tbody.appendChild(tr);
@@ -306,7 +306,7 @@ async function loadEvents() {
       div.innerHTML = `
         <div class="item-info">
           <strong>${e.title}</strong>
-          <div style="font-size:0.82rem;color:var(--text-muted)">📅 ${dateStr}</div>
+          <div style="font-size:0.82rem;color:var(--text-muted)"><i class="fas fa-calendar-alt"></i> ${dateStr}</div>
           <div style="font-size:0.82rem;color:var(--text-muted);margin-top:0.25rem;max-width:500px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.description || ''}</div>
         </div>
         <div class="item-actions">

@@ -123,7 +123,7 @@ async function rewardXPAndCredits(xpAmount, creditsAmount, reason) {
     }
 
     if (leveledUp) {
-      showNotification(`🎉 Честито! Достигна ниво ${newLevel} и получи бонус от ${newLevel * 50} <i class="fas fa-coins"></i>!`, 'success');
+      showNotification(`<i class="fas fa-crown" style="color:#ffd700"></i> Честито! Достигна ниво ${newLevel} и получи бонус от ${newLevel * 50} <i class="fas fa-coins"></i>!`, 'success');
     }
   } catch (err) {
     console.error('Грешка при актуализиране на XP/Кредити:', err);
@@ -163,7 +163,7 @@ async function checkDailyCredits() {
     updateUI();
     
     let msg = `<i class="fas fa-coins"></i> Всекидневен бонус: Получи ${amount} кредита`;
-    if (hpRegen > 0) msg += ` и +${hpRegen} ❤️`;
+    if (hpRegen > 0) msg += ` и +${hpRegen} <i class="fas fa-heart" style="color:#e91e63"></i>`;
     showNotification(msg, 'success');
   } catch (err) {
     console.error('Грешка при зареждане на всекидневен бонус:', err);
@@ -264,7 +264,7 @@ async function loadNews() {
       card.className = 'news-card' + (n.pinned ? ' news-pinned' : '');
       const time = n.createdAt ? new Date(n.createdAt.toMillis()).toLocaleString('bg-BG') : '';
       card.innerHTML = `
-        <h3 style="color:${n.authorColor || 'var(--text-primary)'}">${n.pinned ? '📌 ' : ''}${n.title}</h3>
+        <h3 style="color:${n.authorColor || 'var(--text-primary)'}">${n.pinned ? '<i class="fas fa-thumbtack"></i> ' : ''}${n.title}</h3>
         <div class="news-meta" style="color:${n.authorColor || 'var(--text-muted)'}">${n.author} • ${time}</div>
         <div class="news-content">${n.content}</div>
       `;
@@ -299,7 +299,7 @@ async function loadForum() {
       thread.className = 'forum-thread' + (t.pinned ? ' forum-pinned' : '');
       thread.innerHTML = `
         <div style="display:flex;justify-content:space-between;align-items:center">
-          <h4 style="color:${t.authorColor || 'var(--text-primary)'}">${t.pinned ? '📌 ' : ''}${t.title}</h4>
+          <h4 style="color:${t.authorColor || 'var(--text-primary)'}">${t.pinned ? '<i class="fas fa-thumbtack"></i> ' : ''}${t.title}</h4>
           ${isAdmin ? `<button class="btn btn-small btn-ghost" onclick="event.stopPropagation();togglePin('${id}', ${!!t.pinned})" style="font-size:0.75rem;padding:0.25rem 0.5rem">${t.pinned ? 'Откачи' : 'Закачи'}</button>` : ''}
         </div>
         <div class="thread-meta" style="color:${t.authorColor || 'var(--text-muted)'}">от ${t.author} • ${t.replies || 0} отговора</div>
@@ -553,7 +553,7 @@ async function loadEvents() {
       card.className = 'event-card';
       const dateStr = e.date ? new Date(e.date.toMillis()).toLocaleDateString('bg-BG') : '';
       card.innerHTML = `
-        <div class="event-date">📅 ${dateStr}</div>
+        <div class="event-date"><i class="fas fa-calendar-alt"></i> ${dateStr}</div>
         <h4>${e.title}</h4>
         <p>${e.description || ''}</p>
       `;
@@ -579,7 +579,7 @@ async function loadLeaderboard() {
       const u = doc.data();
       const item = document.createElement('div');
       item.className = 'lb-item';
-      const hpBar = `<span style="font-size:0.75rem;color:var(--text-muted)">❤️ ${u.hp ?? 100}/${u.maxHp ?? 100}</span>`;
+      const hpBar = `<span style="font-size:0.75rem;color:var(--text-muted)"><i class="fas fa-heart" style="color:#e91e63"></i> ${u.hp ?? 100}/${u.maxHp ?? 100}</span>`;
       item.innerHTML = `${rank}. <span style="color:${u.nameColor || '#4caf50'}">${u.username}</span> ${hpBar} - ${u.xp || 0} XP`;
       container.appendChild(item);
       rank++;
@@ -601,11 +601,11 @@ window.openFullLeaderboard = async () => {
       const u = doc.data();
       const div = document.createElement('div');
       div.className = 'admin-list-item';
-      const hpBar = `<span style="font-size:0.78rem;color:var(--text-muted)">❤️ ${u.hp ?? 100}/${u.maxHp ?? 100}</span>`;
+      const hpBar = `<span style="font-size:0.78rem;color:var(--text-muted)"><i class="fas fa-heart" style="color:#e91e63"></i> ${u.hp ?? 100}/${u.maxHp ?? 100}</span>`;
       div.innerHTML = `
         <div class="item-info">
           <strong style="color:${u.nameColor || '#4caf50'}">${rank}. ${u.username}</strong>
-          <div style="font-size:0.82rem;color:var(--text-muted)">⚡ ${u.xp || 0} XP • LVL ${u.level || 1} • ${hpBar}</div>
+          <div style="font-size:0.82rem;color:var(--text-muted)"><i class="fas fa-bolt"></i> ${u.xp || 0} XP • LVL ${u.level || 1} • ${hpBar}</div>
         </div>
       `;
       container.appendChild(div);
@@ -663,7 +663,7 @@ function setupListeners() {
 
   document.getElementById('newPostBtn').addEventListener('click', async () => {
     if ((currentUserData.credits || 0) < 5) {
-      showNotification('Нямаш достатъчно кредити за създаване на тема! (Необходими: 5 💰)', 'error');
+      showNotification('Нямаш достатъчно кредити за създаване на тема! (Необходими: 5 <i class="fas fa-coins"></i>)', 'error');
       showSubModal();
       return;
     }
@@ -700,7 +700,7 @@ function setupListeners() {
 
   document.getElementById('forumReplyBtn').addEventListener('click', async () => {
     if ((currentUserData.credits || 0) < 2) {
-      showNotification('Нямаш достатъчно кредити за отговор! (Необходими: 2 💰)', 'error');
+      showNotification('Нямаш достатъчно кредити за отговор! (Необходими: 2 <i class="fas fa-coins"></i>)', 'error');
       showSubModal();
       return;
     }
