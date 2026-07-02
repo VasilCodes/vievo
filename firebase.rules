@@ -31,9 +31,9 @@ service cloud.firestore {
 
       // Users can update their own non-sensitive fields
       allow update: if isAuth() && request.auth.uid == userId
-        && request.resource.data.role == get(/databases/$(database)/documents/users/$(userId)).data.role
-        && (!request.resource.data.approved || request.resource.data.approved == get(/databases/$(database)/documents/users/$(userId)).data.approved)
-        && (!request.resource.data.banned || request.resource.data.banned == get(/databases/$(database)/documents/users/$(userId)).data.banned);
+        && (!("role" in request.resource.data) || request.resource.data.role == get(/databases/$(database)/documents/users/$(userId)).data.role)
+        && (!("approved" in request.resource.data) || request.resource.data.approved == get(/databases/$(database)/documents/users/$(userId)).data.approved)
+        && (!("banned" in request.resource.data) || request.resource.data.banned == get(/databases/$(database)/documents/users/$(userId)).data.banned);
 
       // Admins and owners can update any user
       allow update: if isAuth()
