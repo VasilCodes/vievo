@@ -146,25 +146,16 @@ async function checkDailyCredits() {
   const newCredits = (currentUserData.credits || 0) + amount;
   
   try {
-    const currentHp = currentUserData.hp ?? 100;
-    const maxHp = currentUserData.maxHp ?? 100;
-    const hpRegen = Math.min(20, maxHp - currentHp);
-    const newHp = currentHp + hpRegen;
-
     await db.collection('users').doc(currentUser.uid).update({
       credits: newCredits,
-      lastDailyCheck: today,
-      hp: newHp
+      lastDailyCheck: today
     });
     
     currentUserData.credits = newCredits;
     currentUserData.lastDailyCheck = today;
-    currentUserData.hp = newHp;
     updateUI();
     
-    let msg = `<i class="fas fa-coins"></i> Всекидневен бонус: Получи ${amount} кредита`;
-    if (hpRegen > 0) msg += ` и +${hpRegen} <i class="fas fa-heart" style="color:#e91e63"></i>`;
-    showNotification(msg, 'success');
+    showNotification(`<i class="fas fa-coins"></i> Всекидневен бонус: Получи ${amount} кредита`, 'success');
   } catch (err) {
     console.error('Грешка при зареждане на всекидневен бонус:', err);
   }
@@ -178,8 +169,6 @@ function updateUI() {
   document.getElementById('profileName').textContent = d.username;
   document.getElementById('profileCredits').textContent = d.credits || 0;
   document.getElementById('profileLevel').textContent = d.level || 1;
-  document.getElementById('profileHp').textContent = d.hp ?? 100;
-  document.getElementById('profileMaxHp').textContent = d.maxHp ?? 100;
 
   const nameColor = d.nameColor || '#4caf50';
   document.getElementById('profileName').style.color = nameColor;
@@ -579,8 +568,7 @@ async function loadLeaderboard() {
       const u = doc.data();
       const item = document.createElement('div');
       item.className = 'lb-item';
-      const hpBar = `<span style="font-size:0.75rem;color:var(--text-muted)"><i class="fas fa-heart" style="color:#e91e63"></i> ${u.hp ?? 100}/${u.maxHp ?? 100}</span>`;
-      item.innerHTML = `${rank}. <span style="color:${u.nameColor || '#4caf50'}">${u.username}</span> ${hpBar} - ${u.xp || 0} XP`;
+      item.innerHTML = `${rank}. <span style="color:${u.nameColor || '#4caf50'}">${u.username}</span> - ${u.xp || 0} XP`;
       container.appendChild(item);
       rank++;
     });
@@ -601,11 +589,10 @@ window.openFullLeaderboard = async () => {
       const u = doc.data();
       const div = document.createElement('div');
       div.className = 'admin-list-item';
-      const hpBar = `<span style="font-size:0.78rem;color:var(--text-muted)"><i class="fas fa-heart" style="color:#e91e63"></i> ${u.hp ?? 100}/${u.maxHp ?? 100}</span>`;
       div.innerHTML = `
         <div class="item-info">
           <strong style="color:${u.nameColor || '#4caf50'}">${rank}. ${u.username}</strong>
-          <div style="font-size:0.82rem;color:var(--text-muted)"><i class="fas fa-bolt"></i> ${u.xp || 0} XP • LVL ${u.level || 1} • ${hpBar}</div>
+          <div style="font-size:0.82rem;color:var(--text-muted)"><i class="fas fa-bolt"></i> ${u.xp || 0} XP • LVL ${u.level || 1}</div>
         </div>
       `;
       container.appendChild(div);

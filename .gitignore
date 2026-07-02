@@ -3,3 +3,6 @@ node_modules/
 firestore-admin-sdk.json
 *.log
 .DS_Store
+
+serviceAccount.json
+

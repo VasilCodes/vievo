@@ -50,8 +50,6 @@ export default {
         const subscription = fields.subscription?.stringValue || 'free';
         const dailyStreak = parseInt(fields.dailyStreak?.integerValue || '0');
         const lastDailyBonus = fields.lastDailyBonus?.stringValue || '';
-        const hp = parseInt(fields.hp?.integerValue || '100');
-        const maxHp = parseInt(fields.maxHp?.integerValue || '100');
         
         // Calculate daily credits based on subscription
         const dailyCredits = { free: 10, plus: 15, pro: 25, ultra: 40 };
@@ -82,10 +80,6 @@ export default {
           newLevel = Math.floor(newXp / 100) + 1;
         }
         
-        // HP regeneration (20 per day, up to max)
-        const hpRegen = Math.min(20, maxHp - hp);
-        const newHp = hp + hpRegen;
-        
         // Update user document via Firestore REST API
         const updateUrl = `${FIREBASE_URL}/${userId}`;
         
@@ -95,13 +89,12 @@ export default {
             xp: { integerValue: String(newXp) },
             level: { integerValue: String(newLevel) },
             dailyStreak: { integerValue: String(newStreak) },
-            lastDailyBonus: { stringValue: new Date().toISOString() },
-            hp: { integerValue: String(newHp) }
+            lastDailyBonus: { stringValue: new Date().toISOString() }
           }
         };
         
         // Use PATCH to update
-        const updateResponse = await fetch(`${updateUrl}?updateMask.fieldPaths=credits&updateMask.fieldPaths=xp&updateMask.fieldPaths=level&updateMask.fieldPaths=dailyStreak&updateMask.fieldPaths=lastDailyBonus&updateMask.fieldPaths=hp`, {
+        const updateResponse = await fetch(`${updateUrl}?updateMask.fieldPaths=credits&updateMask.fieldPaths=xp&updateMask.fieldPaths=level&updateMask.fieldPaths=dailyStreak&updateMask.fieldPaths=lastDailyBonus`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(updateData)
