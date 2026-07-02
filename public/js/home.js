@@ -351,10 +351,19 @@ async function loadForum() {
     threads.forEach(({ id, data: t }) => {
       const thread = document.createElement('div');
       thread.className = 'forum-thread' + (t.pinned ? ' forum-pinned' : '');
+
+      const canDelete = isAdmin || t.authorId === currentUser.uid;
+      const deleteBtn = canDelete
+        ? `<button class="btn btn-small btn-ghost" onclick="event.stopPropagation();deleteForumThread('${id}')" style="font-size:0.75rem;padding:0.25rem 0.5rem;color:var(--danger)" title="Изтрий"><i class="fas fa-trash"></i></button>`
+        : '';
+      const pinBtn = isAdmin
+        ? `<button class="btn btn-small btn-ghost" onclick="event.stopPropagation();togglePin('${id}', ${!!t.pinned})" style="font-size:0.75rem;padding:0.25rem 0.5rem">${t.pinned ? 'Откачи' : 'Закачи'}</button>`
+        : '';
+
       thread.innerHTML = `
         <div style="display:flex;justify-content:space-between;align-items:center">
           <h4 style="color:${t.authorColor || 'var(--text-primary)'}">${t.pinned ? '<i class="fas fa-thumbtack"></i> ' : ''}${t.title}</h4>
-          ${isAdmin ? `<button class="btn btn-small btn-ghost" onclick="event.stopPropagation();togglePin('${id}', ${!!t.pinned})" style="font-size:0.75rem;padding:0.25rem 0.5rem">${t.pinned ? 'Откачи' : 'Закачи'}</button>` : ''}
+          <div style="display:flex;gap:0.25rem">${pinBtn}${deleteBtn}</div>
         </div>
         <div class="thread-meta" style="color:${t.authorColor || 'var(--text-muted)'}">от ${t.author} • ${t.replies || 0} отговора</div>
       `;
@@ -365,6 +374,38 @@ async function loadForum() {
     console.error(err);
   }
 }
+
+window.deleteForumThread = async (id) => {
+  if (!confirm('Наистина ли искаш да изтриеш тази тема?')) return;
+  try {
+    const replies = await db.collection('forum').doc(id).collection('replies').get();
+    const batch = db.batch();
+    replies.forEach(doc => batch.delete(doc.ref));
+    batch.delete(db.collection('forum').doc(id));
+    await batch.commit();
+    loadForum();
+    closeForumModal();
+    showNotification('Темата е изтрита.', 'success');
+  } catch (err) {
+    console.error(err);
+    showNotification('Грешка при изтриване.', 'error');
+  }
+};
+
+window.deleteForumReply = async (threadId, replyId) => {
+  if (!confirm('Наистина ли искаш да изтриеш този отговор?')) return;
+  try {
+    await db.collection('forum').doc(threadId).collection('replies').doc(replyId).delete();
+    await db.collection('forum').doc(threadId).update({
+      replies: firebase.firestore.FieldValue.increment(-1)
+    });
+    openThread(threadId, currentThreadData);
+    showNotification('Отговорът е изтрит.', 'success');
+  } catch (err) {
+    console.error(err);
+    showNotification('Грешка при изтриване.', 'error');
+  }
+};
 
 window.togglePin = async (id, current) => {
   try {
@@ -397,7 +438,12 @@ window.openThread = async (id, data) => {
         const div = document.createElement('div');
         div.className = 'forum-reply';
         const time = r.createdAt ? new Date(r.createdAt.toMillis()).toLocaleString('bg-BG') : '';
-        div.innerHTML = '<div class="reply-author" style="color:' + (r.authorColor || '#4caf50') + ';font-weight:600;font-size:0.85rem">' + r.author + ' <span style="color:var(--text-muted);font-weight:400;font-size:0.78rem">' + time + '</span></div><div style="margin-top:0.3rem;font-size:0.9rem;color:var(--text-secondary)">' + r.text + '</div>';
+        const isAdmin = currentUserData.role === 'admin' || currentUserData.role === 'owner';
+        const canDelete = isAdmin || r.authorId === currentUser.uid;
+        const deleteBtn = canDelete
+          ? `<button class="btn btn-small btn-ghost" onclick="deleteForumReply('${id}', '${doc.id}')" style="font-size:0.7rem;padding:0.15rem 0.4rem;color:var(--danger);float:right" title="Изтрий"><i class="fas fa-trash"></i></button>`
+          : '';
+        div.innerHTML = '<div class="reply-author" style="color:' + (r.authorColor || '#4caf50') + ';font-weight:600;font-size:0.85rem">' + r.author + ' <span style="color:var(--text-muted);font-weight:400;font-size:0.78rem">' + time + '</span>' + deleteBtn + '</div><div style="margin-top:0.3rem;font-size:0.9rem;color:var(--text-secondary)">' + r.text + '</div>';
         repliesContainer.appendChild(div);
       });
     }
@@ -808,11 +854,6 @@ function setupListeners() {
   });
 
   document.getElementById('forumReplyBtn').addEventListener('click', async () => {
-    if ((currentUserData.credits || 0) < 2) {
-      showNotification('Нямаш достатъчно кредити за отговор! (Необходими: 2 <i class="fas fa-coins"></i>)', 'error');
-      showSubModal();
-      return;
-    }
     const input = document.getElementById('forumReplyInput');
     const text = input.value.trim();
     if (!text || !currentThreadId) return;
@@ -828,7 +869,7 @@ function setupListeners() {
         replies: firebase.firestore.FieldValue.increment(1),
         lastActivity: firebase.firestore.FieldValue.serverTimestamp()
       });
-      await rewardXPAndCredits(10, -2, 'Добавяне на отговор във форум тема');
+      await rewardXPAndCredits(10, 0, 'Добавяне на отговор във форум тема');
       input.value = '';
       openThread(currentThreadId, currentThreadData);
 
