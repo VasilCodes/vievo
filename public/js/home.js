@@ -443,7 +443,8 @@ window.openThread = async (id, data) => {
         const deleteBtn = canDelete
           ? `<button class="btn btn-small btn-ghost" onclick="deleteForumReply('${id}', '${doc.id}')" style="font-size:0.7rem;padding:0.15rem 0.4rem;color:var(--danger);float:right" title="Изтрий"><i class="fas fa-trash"></i></button>`
           : '';
-        div.innerHTML = '<div class="reply-author" style="color:' + (r.authorColor || '#4caf50') + ';font-weight:600;font-size:0.85rem">' + r.author + ' <span style="color:var(--text-muted);font-weight:400;font-size:0.78rem">' + time + '</span>' + deleteBtn + '</div><div style="margin-top:0.3rem;font-size:0.9rem;color:var(--text-secondary)">' + r.text + '</div>';
+        div.innerHTML = '<div class="reply-author" style="color:' + (r.authorColor || '#4caf50') + ';font-weight:600;font-size:0.85rem">' + r.author + ' <span style="color:var(--text-muted);font-weight:400;font-size:0.78rem">' + time + '</span>' + deleteBtn + '</div><div class="reply-text" style="margin-top:0.3rem;font-size:0.9rem;color:var(--text-secondary)"></div>';
+        div.querySelector('.reply-text').textContent = r.text;
         repliesContainer.appendChild(div);
       });
     }
@@ -557,7 +558,8 @@ function appendDmMessage(m, msgId) {
   const deleteBtn = isOwn
     ? `<button class="dm-msg-delete-btn" onclick="deleteMessage('${msgId}')" title="Изтрий"><i class="fas fa-times"></i></button>`
     : '';
-  div.innerHTML = '<div class="dm-msg-text">' + m.text + '</div><div class="dm-msg-time">' + time + '</div>' + deleteBtn;
+  div.innerHTML = '<div class="dm-msg-text"></div><div class="dm-msg-time">' + time + '</div>' + deleteBtn;
+  div.querySelector('.dm-msg-text').textContent = m.text;
   container.appendChild(div);
 }
 
