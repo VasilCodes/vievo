@@ -225,23 +225,37 @@ const DEFAULT_SHOP_ITEMS = [
 
 async function loadShopItems() {
   const shopRef = db.collection('games').doc('byagai-ot-koce-kisyov').collection('shop');
-  const snap = await shopRef.get();
   
-  if (snap.empty) {
-    // Populate default shop items
-    for (let item of DEFAULT_SHOP_ITEMS) {
-      await shopRef.doc(item.item_id).set(item);
+  try {
+    const snap = await shopRef.get();
+    
+    if (snap.empty) {
+      const isAdmin = currentUserData && (currentUserData.role === 'admin' || currentUserData.role === 'owner');
+      if (isAdmin) {
+        // Populate default shop items
+        for (let item of DEFAULT_SHOP_ITEMS) {
+          await shopRef.doc(item.item_id).set(item);
+        }
+        loadShopItems();
+      } else {
+        shopItems = DEFAULT_SHOP_ITEMS;
+        renderShopGrid();
+      }
+      return;
     }
-    loadShopItems();
-    return;
+
+    shopItems = [];
+    snap.forEach(doc => {
+      shopItems.push(doc.data());
+    });
+
+    renderShopGrid();
+  } catch (err) {
+    console.error("Грешка при зареждане на магазина: ", err);
+    // Fallback to local default items
+    shopItems = DEFAULT_SHOP_ITEMS;
+    renderShopGrid();
   }
-
-  shopItems = [];
-  snap.forEach(doc => {
-    shopItems.push(doc.data());
-  });
-
-  renderShopGrid();
 }
 
 function renderShopGrid() {
@@ -1361,13 +1375,15 @@ document.getElementById('btnPlayGame').addEventListener('click', () => {
   document.getElementById('mainMenuOverlay').style.display = 'none';
   document.getElementById('hud').classList.add('active');
   
-  // Lock screen
-  renderer.domElement.requestPointerLock();
-  
   gameActive = true;
   gameTime = 0;
   clock.getDelta(); // reset clock
   initEngine();
+  
+  // Lock screen
+  if (renderer && renderer.domElement) {
+    renderer.domElement.requestPointerLock();
+  }
   
   timerInterval = setInterval(() => {
     gameTime += 0.1;
