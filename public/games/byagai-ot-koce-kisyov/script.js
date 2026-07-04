@@ -856,6 +856,11 @@ function initEngine() {
 function resetPositions() {
   player.position.set(2, player.height, 2);
   player.rotation.set(0, 0);
+  if (camera) {
+    camera.rotation.order = "YXZ";
+    camera.rotation.y = 0;
+    camera.rotation.x = 0;
+  }
   player.stamina = 100;
   player.flashlightBattery = 100;
   player.flashlight = false;
@@ -872,14 +877,85 @@ function resetPositions() {
   koce.soundTimer = 0;
 
   // Flashlight light initial state
-  const spot = camera.children.find(c => c instanceof THREE.SpotLight);
-  if (spot) spot.intensity = 0;
+  if (camera) {
+    const spot = camera.children.find(c => c instanceof THREE.SpotLight);
+    if (spot) spot.intensity = 0;
+  }
 
   updateHUD();
 }
 
+function createDetailedBookshelf(x, y, z) {
+  const group = new THREE.Group();
+  group.position.set(x, y, z);
+
+  const woodMat = new THREE.MeshStandardMaterial({ color: 0x3d2314, roughness: 0.7 });
+
+  // Заден панел на секцията
+  const backGeo = new THREE.BoxGeometry(3.8, 2.0, 0.1);
+  const back = new THREE.Mesh(backGeo, woodMat);
+  back.position.z = -0.35;
+  back.castShadow = true;
+  group.add(back);
+
+  // Странични колони на секцията
+  const sideGeo = new THREE.BoxGeometry(0.1, 2.0, 0.8);
+  const leftSide = new THREE.Mesh(sideGeo, woodMat);
+  leftSide.position.x = -1.9;
+  leftSide.castShadow = true;
+  const rightSide = leftSide.clone();
+  rightSide.position.x = 1.9;
+  group.add(leftSide);
+  group.add(rightSide);
+
+  // Горен панел на секцията
+  const topGeo = new THREE.BoxGeometry(3.9, 0.08, 0.8);
+  const top = new THREE.Mesh(topGeo, woodMat);
+  top.position.y = 1.0;
+  top.castShadow = true;
+  group.add(top);
+
+  // Рафтове (3 нива: -0.5, 0.0, 0.5)
+  const shelfGeo = new THREE.BoxGeometry(3.7, 0.04, 0.75);
+  const bookColors = [0xe63946, 0x457b9d, 0x1d3557, 0xe9c46a, 0x2a9d8f, 0xf4a261];
+  
+  for (let lvl = -0.5; lvl <= 0.5; lvl += 0.5) {
+    const shelf = new THREE.Mesh(shelfGeo, woodMat);
+    shelf.position.y = lvl;
+    shelf.receiveShadow = true;
+    group.add(shelf);
+
+    // Добавяне на книги върху всеки рафт
+    for (let bx = -1.7; bx <= 1.7; bx += 0.25) {
+      if (Math.random() < 0.2) continue; // Направи дупки за реализъм
+      
+      const bookHeight = 0.22 + Math.random() * 0.15;
+      const bookWidth = 0.04 + Math.random() * 0.05;
+      const bookDepth = 0.35 + Math.random() * 0.18;
+      
+      const bookMat = new THREE.MeshStandardMaterial({
+        color: bookColors[Math.floor(Math.random() * bookColors.length)],
+        roughness: 0.6
+      });
+      
+      const bookGeo = new THREE.BoxGeometry(bookWidth, bookHeight, bookDepth);
+      const book = new THREE.Mesh(bookGeo, bookMat);
+      book.position.set(bx, lvl + 0.02 + bookHeight / 2, 0);
+      book.castShadow = true;
+      group.add(book);
+    }
+  }
+
+  scene.add(group);
+  
+  // Опростен физически сблъсък за движението на играча
+  const collider = new THREE.Mesh(new THREE.BoxGeometry(4.0, 2.0, 0.8), new THREE.MeshBasicMaterial({ visible: false }));
+  collider.position.set(x, y, z);
+  scene.add(collider);
+  levelMap.push(collider);
+}
+
 function buildLevel(level) {
-  // Clear old maps
   levelMap.forEach(mesh => scene.remove(mesh));
   levelMap = [];
   interactiveObjects.forEach(obj => scene.remove(obj.mesh));
@@ -888,7 +964,6 @@ function buildLevel(level) {
   const wallMat = new THREE.MeshStandardMaterial({ color: 0x1e1e24, roughness: 0.8 });
   const floorMat = new THREE.MeshStandardMaterial({ color: 0x111116, roughness: 0.9 });
 
-  // Outer bounds
   const size = 30;
   const floorGeo = new THREE.PlaneGeometry(size, size);
   const floor = new THREE.Mesh(floorGeo, floorMat);
@@ -897,7 +972,6 @@ function buildLevel(level) {
   scene.add(floor);
   levelMap.push(floor);
 
-  // Ceiling
   const ceilGeo = new THREE.PlaneGeometry(size, size);
   const ceiling = new THREE.Mesh(ceilGeo, wallMat);
   ceiling.rotation.x = Math.PI / 2;
@@ -905,7 +979,6 @@ function buildLevel(level) {
   scene.add(ceiling);
   levelMap.push(ceiling);
 
-  // Perimeter Walls
   const perimeterGeo = new THREE.BoxGeometry(size, 4, 0.2);
   const backWall = new THREE.Mesh(perimeterGeo, wallMat);
   backWall.position.set(0, 2, -size / 2);
@@ -935,7 +1008,21 @@ function buildLevel(level) {
   if (level === 1) {
     showNotification("Намери фенерчето на 1-вия етаж и се качи по стълбите на тъмния 2-ри етаж за ключа!", "info");
 
-    // Balcony / Mezzanine Floor (2nd Floor) at y = 2.5
+    // Декоративни класически колони по стените на библиотеката
+    const colGeo = new THREE.CylinderGeometry(0.2, 0.2, 4, 8);
+    const colMat = new THREE.MeshStandardMaterial({ color: 0x27272a, roughness: 0.8 });
+    for (let cx = -14.8; cx <= 14.8; cx += 29.6) {
+      for (let cz = -10; cz <= 10; cz += 10) {
+        const col = new THREE.Mesh(colGeo, colMat);
+        col.position.set(cx, 2, cz);
+        col.castShadow = true;
+        col.receiveShadow = true;
+        scene.add(col);
+        levelMap.push(col);
+      }
+    }
+
+    // Втори етаж (балкон)
     const balconyGeo = new THREE.BoxGeometry(16, 0.15, 16);
     const balconyMat = new THREE.MeshStandardMaterial({ color: 0x18181c, roughness: 0.8 });
     const balcony = new THREE.Mesh(balconyGeo, balconyMat);
@@ -944,7 +1031,23 @@ function buildLevel(level) {
     scene.add(balcony);
     levelMap.push(balcony);
 
-    // Stairs connecting 1st and 2nd floor
+    // Парапет (fence) на втория етаж
+    const fenceGroup = new THREE.Group();
+    fenceGroup.position.set(0, 2.5, 1.0);
+    const topRail = new THREE.Mesh(new THREE.BoxGeometry(16, 0.08, 0.08), balconyMat);
+    topRail.position.set(0, 0.9, 0);
+    fenceGroup.add(topRail);
+    
+    const barGeo = new THREE.CylinderGeometry(0.02, 0.02, 0.9);
+    for (let rx = -8; rx <= 8; rx += 0.8) {
+      const bar = new THREE.Mesh(barGeo, balconyMat);
+      bar.position.set(rx, 0.45, 0);
+      bar.castShadow = true;
+      fenceGroup.add(bar);
+    }
+    scene.add(fenceGroup);
+
+    // Стълби до втория етаж
     for (let i = 0; i < 11; i++) {
       const stepGeo = new THREE.BoxGeometry(2.5, 0.23, 0.45);
       const step = new THREE.Mesh(stepGeo, balconyMat);
@@ -955,8 +1058,14 @@ function buildLevel(level) {
       levelMap.push(step);
     }
 
-    // Warm Lightbulbs / PointLights for 1st Floor
-    const bulbGeo = new THREE.SphereGeometry(0.12, 8, 8);
+    // Диагонален парапет за стълбите
+    const stairsRailing = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 5.5), balconyMat);
+    stairsRailing.position.set(-3.7, 1.8, 1.0);
+    stairsRailing.rotation.x = 0.52;
+    scene.add(stairsRailing);
+
+    // Точково локално осветление за първия етаж
+    const bulbGeo = new THREE.SphereGeometry(0.1, 8, 8);
     const bulbMat = new THREE.MeshBasicMaterial({ color: 0xffe0b2 });
     
     const lightPositions = [
@@ -970,55 +1079,51 @@ function buildLevel(level) {
       bulb.position.copy(pos);
       scene.add(bulb);
 
-      const light = new THREE.PointLight(0xffd59a, 2.0, 10);
+      const light = new THREE.PointLight(0xffd59a, 2.2, 10);
       light.position.copy(pos);
       light.castShadow = true;
       scene.add(light);
     });
 
-    // Bookshelves (Grid layout)
-    const shelfGeo = new THREE.BoxGeometry(5, 2.2, 0.8);
-    const shelfMat = new THREE.MeshStandardMaterial({ color: 0x3d2314, roughness: 0.6 });
+    // Детайлни секции с книги на първия етаж
+    createDetailedBookshelf(-8, 1.0, 5);
+    createDetailedBookshelf(8, 1.0, 5);
 
-    // 1st Floor Bookshelves
-    for (let x = -8; x <= 8; x += 8) {
-      if (x === 0) continue;
-      const shelf = new THREE.Mesh(shelfGeo, shelfMat);
-      shelf.position.set(x, 1.1, 5);
-      shelf.castShadow = true;
-      shelf.receiveShadow = true;
-      scene.add(shelf);
-      levelMap.push(shelf);
+    // Детайлни секции с книги на втория етаж в тъмнината
+    createDetailedBookshelf(-6, 3.5, -10);
+    createDetailedBookshelf(0, 3.5, -10);
+    createDetailedBookshelf(6, 3.5, -10);
 
-      // Falling books
-      const book = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.3, 0.2), new THREE.MeshStandardMaterial({ color: 0x415a77 }));
-      book.position.set(x + (Math.random() - 0.5) * 3, 2.35, 5);
-      book.castShadow = true;
-      scene.add(book);
-      interactiveObjects.push({ type: 'fallable', mesh: book, radius: 0.35, active: true });
-    }
+    // Красива 3D маса с крака в центъра на първия етаж
+    const tableGroup = new THREE.Group();
+    tableGroup.position.set(0, 0, 4);
 
-    // 2nd Floor (Balcony) Bookshelves - in dark
-    for (let x = -6; x <= 6; x += 4) {
-      const shelf = new THREE.Mesh(shelfGeo, shelfMat);
-      shelf.position.set(x, 3.6, -10);
-      shelf.castShadow = true;
-      shelf.receiveShadow = true;
-      scene.add(shelf);
-      levelMap.push(shelf);
-    }
+    const tableTop = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.06, 1.2), new THREE.MeshStandardMaterial({ color: 0x5d4037, roughness: 0.6 }));
+    tableTop.position.y = 0.8;
+    tableTop.castShadow = true;
+    tableTop.receiveShadow = true;
+    tableGroup.add(tableTop);
 
-    // Table on 1st Floor (brightly lit) where the flashlight is placed
-    const tableGeo = new THREE.BoxGeometry(1.5, 0.8, 1.0);
-    const tableMat = new THREE.MeshStandardMaterial({ color: 0x4e342e, roughness: 0.7 });
-    const table = new THREE.Mesh(tableGeo, tableMat);
-    table.position.set(0, 0.4, 4);
-    table.castShadow = true;
-    table.receiveShadow = true;
-    scene.add(table);
-    levelMap.push(table);
+    const legGeo = new THREE.CylinderGeometry(0.04, 0.04, 0.8);
+    const legMat = new THREE.MeshStandardMaterial({ color: 0x3e2723, roughness: 0.8 });
+    const legOffsets = [
+      [-0.9, -0.5], [0.9, -0.5], [-0.9, 0.5], [0.9, 0.5]
+    ];
+    legOffsets.forEach(offset => {
+      const leg = new THREE.Mesh(legGeo, legMat);
+      leg.position.set(offset[0], 0.4, offset[1]);
+      leg.castShadow = true;
+      tableGroup.add(leg);
+    });
+    scene.add(tableGroup);
 
-    // Flashlight Item (on table)
+    // Опростен физически сблъсък за масата
+    const tableCollider = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.8, 1.2), new THREE.MeshBasicMaterial({ visible: false }));
+    tableCollider.position.set(0, 0.4, 4);
+    scene.add(tableCollider);
+    levelMap.push(tableCollider);
+
+    // Фенерче върху масата
     const flashlightGeo = new THREE.CylinderGeometry(0.04, 0.04, 0.25, 8);
     const flashlightMat = new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.8 });
     const flashlightMesh = new THREE.Mesh(flashlightGeo, flashlightMat);
@@ -1031,10 +1136,10 @@ function buildLevel(level) {
       itemId: 'flashlight',
       icon: 'fa-flashlight',
       mesh: flashlightMesh,
-      radius: 0.45
+      radius: 0.6
     });
 
-    // Exit Door (1st Floor)
+    // Изходна врата
     const doorGeo = new THREE.BoxGeometry(1.2, 2.2, 0.15);
     const doorMat = new THREE.MeshStandardMaterial({ color: 0x5e2c04 });
     const doorMesh = new THREE.Mesh(doorGeo, doorMat);
@@ -1047,7 +1152,7 @@ function buildLevel(level) {
       radius: 1.5
     });
 
-    // Key Item (on the 2nd Floor mezzanine in dark)
+    // Изходен ключ (на втория етаж в тъмното)
     const keyGeo = new THREE.BoxGeometry(0.05, 0.02, 0.12);
     const keyMat = new THREE.MeshStandardMaterial({ color: 0xffd700 });
     const keyMesh = new THREE.Mesh(keyGeo, keyMat);
@@ -1180,12 +1285,6 @@ function setupInputListeners() {
   inputsBound = true;
 
   window.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-      if (gameActive) {
-        togglePause();
-      }
-      return;
-    }
     const key = e.key.toLowerCase();
     if (key === 'w') keys.w = true;
     if (key === 'a') keys.a = true;
@@ -1255,6 +1354,13 @@ function setupInputListeners() {
         updateHUD();
       }
     });
+  });
+
+  // Автоматично паузиране при загуба на Pointer Lock
+  document.addEventListener('pointerlockchange', () => {
+    if (gameActive && document.pointerLockElement === null && !player.hiding) {
+      pauseGame();
+    }
   });
 }
 
@@ -1383,27 +1489,30 @@ function handlePlayerMovement(delta) {
   if (keys.s) moveDir.add(forward.clone().negate());
   if (keys.d) moveDir.add(right);
   if (keys.a) moveDir.add(right.clone().negate());
-  moveDir.normalize();
 
-  const prevPos = player.position.clone();
-  player.position.addScaledVector(moveDir, speed);
+  if (moveDir.lengthSq() > 0.001) {
+    moveDir.normalize();
 
-  // Simple bounding collision checks against levelMap walls
-  let collision = false;
-  levelMap.forEach(mesh => {
-    if (mesh === levelMap[0] || mesh === levelMap[1]) return; // ignore floor and ceil
-    const box = new THREE.Box3().setFromObject(mesh);
-    const playerBox = new THREE.Box3(
-      new THREE.Vector3(player.position.x - 0.25, 0, player.position.z - 0.25),
-      new THREE.Vector3(player.position.x + 0.25, 2, player.position.z + 0.25)
-    );
-    if (box.intersectsBox(playerBox)) {
-      collision = true;
+    const prevPos = player.position.clone();
+    player.position.addScaledVector(moveDir, speed);
+
+    // Simple bounding collision checks against levelMap walls
+    let collision = false;
+    levelMap.forEach(mesh => {
+      if (mesh === levelMap[0] || mesh === levelMap[1]) return; // ignore floor and ceil
+      const box = new THREE.Box3().setFromObject(mesh);
+      const playerBox = new THREE.Box3(
+        new THREE.Vector3(player.position.x - 0.25, 0, player.position.z - 0.25),
+        new THREE.Vector3(player.position.x + 0.25, 2, player.position.z + 0.25)
+      );
+      if (box.intersectsBox(playerBox)) {
+        collision = true;
+      }
+    });
+
+    if (collision) {
+      player.position.copy(prevPos);
     }
-  });
-
-  if (collision) {
-    player.position.copy(prevPos);
   }
 
   // Update Camera positions
@@ -1788,27 +1897,11 @@ window.unlockAllLevels = () => {
 // -------------------------------------------------------------
 // Pause Menu Implementation
 // -------------------------------------------------------------
-window.togglePause = () => {
-  if (!gameActive) return;
-  gamePaused = !gamePaused;
-  
-  if (gamePaused) {
-    document.exitPointerLock();
-    clearInterval(timerInterval);
-    document.getElementById('pauseOverlay').style.display = 'flex';
-  } else {
-    document.getElementById('pauseOverlay').style.display = 'none';
-    const canvas = document.getElementById('gameCanvas');
-    if (canvas) canvas.requestPointerLock();
-    
-    clock.getDelta(); // Reset clock delta
-    gameLoop();
-    
-    clearInterval(timerInterval);
-    timerInterval = setInterval(() => {
-      gameTime += 0.1;
-    }, 100);
-  }
+window.pauseGame = () => {
+  if (!gameActive || gamePaused) return;
+  gamePaused = true;
+  clearInterval(timerInterval);
+  document.getElementById('pauseOverlay').style.display = 'flex';
   playSound('click');
 };
 
