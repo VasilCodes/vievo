@@ -2,6 +2,7 @@
 let scene, camera, renderer;
 let gameActive = false;
 let gameTime = 0, timerInterval;
+let gameStats = { maxNoise: 0, itemsFound: 0, startTime: 0 };
 
 // Player states
 const player = {
@@ -25,6 +26,7 @@ const player = {
   isCrawling: false,
   velocity: new THREE.Vector3(0, 0, 0),
   isGrounded: true,
+  onLadder: false,
   jumpStrength: 5.2,
   maxHearts: 3,
   hearts: 3
@@ -1049,8 +1051,9 @@ function resetPositions() {
   player.activeSlot = 1;
   player.hiding = false;
   player.currentLocker = null;
+  player.onLadder = false;
 
-  koce.position.set(15, 0, 15);
+  koce.position.set(12, 0, 12);
   koce.state = 'patrol';
   koce.patrolTarget.copy(getRandomPatrolNode());
   koce.lastKnownPlayerPos = null;
@@ -1265,60 +1268,30 @@ function buildLevel(level) {
     }
     scene.add(fenceGroup);
 
-    // Стълби до втория етаж (от земята до ръба на балкона z=1)
-    const stairMat = new THREE.MeshStandardMaterial({ color: 0x6d4c41, roughness: 0.7 });
-    const stairSideMat = new THREE.MeshStandardMaterial({ color: 0x4e342e, roughness: 0.8 });
-    
-    for (let i = 0; i < 11; i++) {
-      const stepGeo = new THREE.BoxGeometry(2.5, 0.23, 0.45);
-      const step = new THREE.Mesh(stepGeo, stairMat);
-      step.position.set(-5, 0.115 + i * 0.23, -3.5 + i * 0.45);
-      step.receiveShadow = true;
-      step.castShadow = true;
-      scene.add(step);
-      levelMap.push(step);
-      
-      // Нос на стъпалото (издадена предна част)
-      if (i < 10) {
-        const nosingGeo = new THREE.BoxGeometry(2.5, 0.03, 0.06);
-        const nosing = new THREE.Mesh(nosingGeo, stairSideMat);
-        nosing.position.set(-5, 0.115 + i * 0.23 + 0.115, -3.5 + i * 0.45 + 0.255);
-        nosing.castShadow = true;
-        scene.add(nosing);
-      }
-    }
-
-    // Странични тетиви (наклонени греди)
+    // Вертикална стълба (ladder) до втория етаж
+    const ladderMat = new THREE.MeshStandardMaterial({ color: 0x6d4c41, roughness: 0.7 });
+    const ladderRailMat = new THREE.MeshStandardMaterial({ color: 0x4e342e, roughness: 0.8 });
+    const ladderGroup = new THREE.Group();
+    ladderGroup.position.set(-5, 0, -2.5);
+    // Две вертикални греди
     for (let side = -1; side <= 1; side += 2) {
-      const stringerGeo = new THREE.BoxGeometry(0.08, 2.6, 5.2);
-      const stringer = new THREE.Mesh(stringerGeo, stairSideMat);
-      stringer.position.set(-5 + side * 1.3, 1.3, -1.25);
-      stringer.rotation.x = 0.46;
-      stringer.castShadow = true;
-      scene.add(stringer);
+      const rail = new THREE.Mesh(new THREE.BoxGeometry(0.05, 2.8, 0.05), ladderRailMat);
+      rail.position.set(side * 0.3, 1.4, 0);
+      ladderGroup.add(rail);
     }
-
-    // Перила с балюстради
-    const railMat = new THREE.MeshStandardMaterial({ color: 0x3d2314, roughness: 0.6 });
-    // Горна ръкохватка
-    const handrailGeo = new THREE.BoxGeometry(0.06, 0.06, 5.2);
-    const handrail = new THREE.Mesh(handrailGeo, railMat);
-    handrail.position.set(-3.8, 2.4, -1.25);
-    handrail.rotation.x = 0.46;
-    handrail.castShadow = true;
-    scene.add(handrail);
-    
-    // Балюстради (вертикални пръчки)
-    for (let bi = 0; bi < 10; bi++) {
-      const balusterGeo = new THREE.BoxGeometry(0.03, 0.6, 0.03);
-      const baluster = new THREE.Mesh(balusterGeo, railMat);
-      const t = (bi + 0.5) / 10;
-      const bz = -3.5 + t * 4.5;
-      const by = 0.115 + t * 2.3;
-      baluster.position.set(-3.8, by + 0.7, bz);
-      baluster.castShadow = true;
-      scene.add(baluster);
+    // Стъпала (хоризонтални пръти на всеки 0.25 единици)
+    for (let i = 0; i <= 11; i++) {
+      const rung = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.55, 4), ladderMat);
+      rung.position.set(0, i * 0.25, 0);
+      rung.rotation.x = Math.PI / 2;
+      ladderGroup.add(rung);
     }
+    scene.add(ladderGroup);
+    // Ladder collider (invisible)
+    const ladderCollider = new THREE.Mesh(new THREE.BoxGeometry(0.8, 2.8, 0.6), new THREE.MeshBasicMaterial({ visible: false }));
+    ladderCollider.position.set(-5, 1.4, -2.5);
+    scene.add(ladderCollider);
+    levelMap.push(ladderCollider);
 
     // Точково локално осветление за първия етаж
     const bulbGeo = new THREE.SphereGeometry(0.1, 8, 8);
@@ -1567,7 +1540,7 @@ function buildLevel(level) {
       type: 'item',
       name: 'Фенерче',
       itemId: 'flashlight',
-      icon: 'fa-flashlight',
+      icon: 'fa-lightbulb',
       mesh: flashlightMesh,
       radius: 0.6
     });
@@ -2019,6 +1992,7 @@ function performInteraction() {
       player.inventory.push({ id: nearest.itemId, name: nearest.name, icon: nearest.icon });
       scene.remove(nearest.mesh);
       interactiveObjects = interactiveObjects.filter(o => o !== nearest);
+      gameStats.itemsFound++;
       showNotification(`Събрано: ${nearest.name}`);
       playSound('win');
       updateHUD();
@@ -2083,17 +2057,8 @@ function updateInteractionPrompt() {
       if (crosshair) crosshair.classList.add('interactable');
       promptEl.classList.add('active');
       
-      if (targetObj.itemId === 'flashlight') {
-        promptEl.innerHTML = `Фенер <span style="color: #ffd700;">[E]</span>`;
-      } else if (targetObj.itemId === 'door_key') {
-        promptEl.innerHTML = `Ключ за врата <span style="color: #ffd700;">[E]</span>`;
-      } else if (targetObj.type === 'locker') {
-        promptEl.innerHTML = `Скрий се в шкафче <span style="color: #ffd700;">[E]</span>`;
-      } else if (targetObj.type === 'exit_door') {
-        promptEl.innerHTML = `Отключи врата <span style="color: #ffd700;">[E]</span>`;
-      } else {
-        promptEl.innerHTML = `Взаимодействие <span style="color: #ffd700;">[E]</span>`;
-      }
+      const action = targetObj.type === 'item' ? 'Вземи' : (targetObj.type === 'exit_door' ? 'Отключи' : (targetObj.type === 'locker' ? 'Скрий се в' : ''));
+      promptEl.innerHTML = `${action} ${targetObj.name} <span style="color: #ffd700;">[E]</span>`;
       return;
     }
   }
@@ -2122,6 +2087,7 @@ function gameLoop() {
 
   updateKoceAI(delta);
   updateNoiseHUD();
+  if (player.noise > gameStats.maxNoise) gameStats.maxNoise = player.noise;
   updateFlashlightBattery(delta);
   updateInteractionPrompt();
   updateZoneTriggers(delta);
@@ -2166,7 +2132,8 @@ function handlePlayerMovement(delta) {
   if (keys.d) moveDir.add(right);
   if (keys.a) moveDir.add(right.clone().negate());
 
-  if (moveDir.lengthSq() > 0.001) {
+  // Horizontal movement (skip when on ladder)
+  if (!player.onLadder && moveDir.lengthSq() > 0.001) {
     moveDir.normalize();
 
     const prevPos = player.position.clone();
@@ -2200,55 +2167,76 @@ function handlePlayerMovement(delta) {
     }
   }
 
-  // Gravity physics logic
-  if (!player.isGrounded) {
-    player.velocity.y -= 9.8 * 2.0 * delta; // standard gravity
-    player.position.y += player.velocity.y * delta;
-
-    // Check landing Y height
-    let standY = player.height;
-    
-    // Balcony landing check
-    if (player.position.x >= -8 && player.position.x <= 8 && player.position.z >= -15 && player.position.z <= 1) {
-      if (player.position.y >= 2.5 + player.height - 0.2 && player.velocity.y <= 0) {
-        standY = 2.5 + player.height;
-      }
+  // Ladder detection & climbing
+  const isOnLadder = player.position.x >= -5.4 && player.position.x <= -4.6 && player.position.z >= -2.8 && player.position.z <= -2.2 && player.position.y < 2.5 + player.height;
+  if (keys.w && isOnLadder && player.position.y < 2.5 + player.height) {
+    player.onLadder = true;
+  }
+  if (isOnLadder && player.onLadder) {
+    if (keys.w) {
+      player.position.y += speed;
     }
-
-    // Stair landing check (catch player falling onto stairs)
-    if (player.position.x >= -6.5 && player.position.x <= -3.5 && player.position.z >= -4.0 && player.position.z <= 1.5 && player.position.y < 2.5 + player.height) {
-      const t = Math.max(0, Math.min(1, (player.position.z + 3.5) / 4.5));
-      const stairHeight = 0.115 + t * 2.3;
-      if (player.position.y >= stairHeight + player.height - 0.2 && player.velocity.y <= 0) {
-        standY = Math.max(standY, stairHeight + player.height);
-      }
+    if (keys.s && player.position.y > player.height) {
+      player.position.y -= speed;
     }
-
-    if (player.position.y <= standY) {
-      player.position.y = standY;
-      player.velocity.y = 0;
+    player.velocity.y = 0;
+    player.isGrounded = false;
+    // Step off at top
+    if (player.position.y >= 2.5 + player.height) {
+      player.position.y = 2.5 + player.height;
+      player.onLadder = false;
       player.isGrounded = true;
     }
-  } else {
-    // Grounded height checks
-    let expectedY = player.height;
-    const isOnBalcony = player.position.y > 2.0 && player.position.x >= -8 && player.position.x <= 8 && player.position.z >= -15 && player.position.z <= 1;
-    if (isOnBalcony) {
-      expectedY = 2.5 + player.height;
-    } else if (player.position.x >= -6.5 && player.position.x <= -3.5 && player.position.z >= -4.0 && player.position.z <= 1.5) {
-      // Smooth step climbing on stairs: x = -5, z = -3.5 to 1
-      const t = Math.max(0, Math.min(1, (player.position.z + 3.5) / 4.5));
-      const stairHeight = 0.115 + t * 2.3;
-      expectedY = stairHeight + player.height;
+    // Step off at bottom
+    if (player.position.y <= player.height) {
+      player.position.y = player.height;
+      player.onLadder = false;
+      player.isGrounded = true;
     }
+    // Move away from ladder if not pressing W/S
+    if (!keys.w && !keys.s) {
+      // stay on ladder
+    }
+    // If player moves away from ladder zone
+    if (!isOnLadder && (keys.a || keys.d)) {
+      player.onLadder = false;
+    }
+  }
 
-    // Apply height adjustment
-    if (Math.abs(player.position.y - expectedY) > 0.05) {
-      if (player.position.y > expectedY) {
-        player.isGrounded = false;
+  // Gravity physics logic (skip if on ladder)
+  if (!player.onLadder) {
+    if (!player.isGrounded) {
+      player.velocity.y -= 9.8 * 2.0 * delta;
+      player.position.y += player.velocity.y * delta;
+
+      let standY = player.height;
+
+      // Balcony landing check
+      if (player.position.x >= -8 && player.position.x <= 8 && player.position.z >= -15 && player.position.z <= 1) {
+        if (player.position.y >= 2.5 + player.height - 0.2 && player.velocity.y <= 0) {
+          standY = 2.5 + player.height;
+        }
+      }
+
+      if (player.position.y <= standY) {
+        player.position.y = standY;
         player.velocity.y = 0;
-      } else {
-        player.position.y = expectedY;
+        player.isGrounded = true;
+      }
+    } else {
+      let expectedY = player.height;
+      const isOnBalcony = player.position.y > 2.0 && player.position.x >= -8 && player.position.x <= 8 && player.position.z >= -15 && player.position.z <= 1;
+      if (isOnBalcony) {
+        expectedY = 2.5 + player.height;
+      }
+
+      if (Math.abs(player.position.y - expectedY) > 0.05) {
+        if (player.position.y > expectedY) {
+          player.isGrounded = false;
+          player.velocity.y = 0;
+        } else {
+          player.position.y = expectedY;
+        }
       }
     }
   }
@@ -2399,7 +2387,7 @@ function updateKoceAI(delta) {
       player.rotation.set(0, 0);
       
       // Нулиране на позицията на Коце
-      koce.position.set(15, 0, 15);
+  koce.position.set(12, 0, 12);
       koce.state = 'patrol';
       koce.patrolTarget.copy(getRandomPatrolNode());
     }
@@ -2605,6 +2593,7 @@ document.getElementById('btnPlayGame').addEventListener('click', () => {
   
   gameActive = true;
   gameTime = 0;
+  gameStats = { maxNoise: 0, itemsFound: 0, startTime: Date.now() };
   currentPart = 1;
   clock.getDelta(); // reset clock
   initEngine();
@@ -2684,6 +2673,16 @@ function triggerVictory() {
   document.getElementById('victoryOverlay').style.display = 'flex';
   document.getElementById('hud').classList.remove('active');
 
+  // Calculate dynamic bonuses
+  const speedBonus = gameTime < 60 ? 30 : (gameTime < 120 ? 15 : 0);
+  const stealthBonus = gameStats.maxNoise < 20 ? 25 : (gameStats.maxNoise < 40 ? 10 : 0);
+  const exploreBonus = gameStats.itemsFound * 10;
+  const totalBonus = speedBonus + stealthBonus + exploreBonus;
+
+  document.getElementById('speedBonus').textContent = '+' + speedBonus + ' XP';
+  document.getElementById('stealthBonus').textContent = '+' + stealthBonus + ' XP';
+  document.getElementById('exploreBonus').textContent = '+' + exploreBonus + ' XP';
+
   // Track completed parts
   const progress = getProgress();
   const completedKey = `l1_p${currentPart}`;
@@ -2697,10 +2696,15 @@ function triggerVictory() {
   const isReplay = allPartsDone && currentPart <= 10;
 
   // Rewards (reduced if replay)
-  const xpReward = isReplay ? 10 : 50;
-  const creditReward = isReplay ? 5 : 25;
+  const baseXP = isReplay ? 10 : 50;
+  const baseCredits = isReplay ? 5 : 25;
+  const xpReward = baseXP + totalBonus;
+  const creditReward = baseCredits + Math.floor(totalBonus / 5);
   rewardXPAndCredits(xpReward, creditReward, isReplay ? 'Преиграване (намалени награди)' : 'Преминаване на ниво');
   submitLeaderboardRecord(Math.floor(gameTime * 1000));
+
+  document.getElementById('totalCredits').textContent = '+' + creditReward;
+  document.getElementById('totalXP').textContent = '+' + xpReward;
 
   if (isReplay) {
     showNotification('Преиграване — наградите са намалени!', 'warn');
