@@ -41,6 +41,12 @@ service cloud.firestore {
 
       // Only owner can delete users
       allow delete: if isAuth() && getUserRole(request.auth.uid) == 'owner';
+
+      // Inventory subcollection
+      match /inventory/{itemId} {
+        allow read: if isAuth();
+        allow create, update, delete: if isAuth() && (request.auth.uid == userId || getUserRole(request.auth.uid) == 'admin' || getUserRole(request.auth.uid) == 'owner');
+      }
     }
 
     // News collection
@@ -115,6 +121,25 @@ service cloud.firestore {
         allow create: if isAuth() && request.resource.data.senderId == request.auth.uid;
         allow update: if isAuth() && resource.data.senderId == request.auth.uid;
         allow delete: if isAuth() && resource.data.senderId == request.auth.uid;
+      }
+    }
+
+    // Games collection and hierarchy
+    match /games/{gameId} {
+      allow read: if isAuth();
+      allow create, update, delete: if isAuth() && (getUserRole(request.auth.uid) == 'admin' || getUserRole(request.auth.uid) == 'owner');
+
+      // Shop subcollection
+      match /shop/{itemId} {
+        allow read: if isAuth();
+        allow create, update, delete: if isAuth() && (getUserRole(request.auth.uid) == 'admin' || getUserRole(request.auth.uid) == 'owner');
+      }
+
+      // Leaderboard subcollection
+      match /leaderboard/{scoreId} {
+        allow read: if isAuth();
+        allow create, update: if isAuth() && request.resource.data.user_id == request.auth.uid;
+        allow delete: if isAuth() && (getUserRole(request.auth.uid) == 'admin' || getUserRole(request.auth.uid) == 'owner');
       }
     }
 

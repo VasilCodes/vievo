@@ -16,11 +16,25 @@ auth.onAuthStateChanged((user) => {
     db.collection('users').doc(user.uid).onSnapshot((doc) => {
       if (doc.exists) {
         const data = doc.data();
+
+        // Ограничаване на достъпа до игрите в етап на разработка
+        if (window.location.pathname.includes('/games/')) {
+          if (data.role !== 'admin' && data.role !== 'owner') {
+            alert('Достъпът до игрите в момента е ограничен само за администратори!');
+            window.location.href = '/home/';
+            return;
+          }
+        }
+
         const creditsEl = document.getElementById('navCredits');
         const xpEl = document.getElementById('navXP');
         if (creditsEl) creditsEl.innerHTML = `<i class="fas fa-coins"></i> ${data.credits || 0}`;
         if (xpEl) xpEl.innerHTML = `<i class="fas fa-bolt"></i> ${data.xp || 0}`;
       }
     });
+  } else {
+    if (!window.location.pathname.includes('/login/') && !window.location.pathname.includes('/signup/')) {
+      window.location.href = '/login/';
+    }
   }
 });
