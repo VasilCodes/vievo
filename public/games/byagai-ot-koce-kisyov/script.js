@@ -1341,94 +1341,225 @@ function buildLevel(level) {
       scene.add(light);
     });
 
-    // Лабиринт от детайлни секции с книги на първия етаж (сгъстен за сложен пъзел)
-    const mazePositions = [
-      { x: -10, z: 12 }, { x: -10, z: 6 }, { x: -10, z: 0 }, { x: -10, z: -6 }, { x: -10, z: -12 },
-      { x: -7, z: 9 }, { x: -7, z: 3 }, { x: -7, z: -3 }, { x: -7, z: -9 },
-      { x: -5, z: 12 }, { x: -5, z: 6 }, { x: -5, z: 0 }, { x: -5, z: -6 }, { x: -5, z: -12 },
-      { x: -3, z: 9 }, { x: -3, z: 3 }, { x: -3, z: -3 }, { x: -3, z: -9 },
-      { x: 0, z: 12 }, { x: 0, z: 6 }, { x: 0, z: 0 }, { x: 0, z: -6 }, { x: 0, z: -12 },
-      { x: 3, z: 9 }, { x: 3, z: 3 }, { x: 3, z: -3 }, { x: 3, z: -9 },
-      { x: 5, z: 12 }, { x: 5, z: 6 }, { x: 5, z: 0 }, { x: 5, z: -6 }, { x: 5, z: -12 },
-      { x: 7, z: 9 }, { x: 7, z: 3 }, { x: 7, z: -3 }, { x: 7, z: -9 },
-      { x: 10, z: 12 }, { x: 10, z: 6 }, { x: 10, z: 0 }, { x: 10, z: -6 }, { x: 10, z: -12 }
+    // === БИБЛИОТЕЧНО ОФОРМЛЕНИЕ ===
+    // 12 рафта, разположени като истинска библиотека: по стените + няколко островни
+    const shelfPositions = [
+      // По стените
+      { x: -12, z: 10 }, { x: -12, z: 3 }, { x: -12, z: -4 }, { x: -12, z: -10 },
+      { x: 12, z: 10 }, { x: 12, z: 3 }, { x: 12, z: -4 }, { x: 12, z: -10 },
+      // Острови (разделят пространството)
+      { x: -4, z: 8 }, { x: 4, z: 8 },
+      { x: -6, z: -3 }, { x: 6, z: -3 },
+      // На балкона
+      { x: -4, z: -8, y: 3.5 }, { x: 4, z: -8, y: 3.5 }, { x: 0, z: -4, y: 3.5 }
     ];
-    mazePositions.forEach(pos => {
-      createDetailedBookshelf(pos.x, 1.0, pos.z);
+    shelfPositions.forEach(pos => {
+      createDetailedBookshelf(pos.x, pos.y || 1.0, pos.z);
     });
 
-    // Детайлни секции с книги на втория етаж в тъмнината (сгъстен лабиринт)
-    const balconyMaze = [
-      { x: -6, z: -10 }, { x: -6, z: -6 }, { x: -6, z: -2 },
-      { x: -3, z: -10 }, { x: -3, z: -6 }, { x: -3, z: -2 },
-      { x: 0, z: -10 }, { x: 0, z: -6 }, { x: 0, z: -2 },
-      { x: 3, z: -10 }, { x: 3, z: -6 }, { x: 3, z: -2 },
-      { x: 6, z: -10 }, { x: 6, z: -6 }, { x: 6, z: -2 }
-    ];
-    balconyMaze.forEach(pos => {
-      createDetailedBookshelf(pos.x, 3.5, pos.z);
-    });
-
-    // Подобрен 3D модел на фенерче (цилиндрична дръжка, конусна глава, леща, релефен грип, кламер)
-    const flashlightMesh = new THREE.Group();
+    // === ЧИТАТЕЛСКИ БЮРА ===
+    const deskMat = new THREE.MeshStandardMaterial({ color: 0x5d4037, roughness: 0.7 });
+    const deskTopMat = new THREE.MeshStandardMaterial({ color: 0x6d4c41, roughness: 0.5 });
     
-    // Дръжка (цилиндър на сегменти за по-гладка визия)
-    const handleGeo = new THREE.CylinderGeometry(0.025, 0.023, 0.18, 12);
-    const handleMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.6 });
-    const handle = new THREE.Mesh(handleGeo, handleMat);
-    handle.rotation.x = Math.PI / 2;
-    flashlightMesh.add(handle);
-    
-    // Релефен грип (пръстени около дръжката)
-    const gripMat = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.9 });
-    for (let gi = -0.06; gi <= 0.06; gi += 0.03) {
-      const gripGeo = new THREE.TorusGeometry(0.026, 0.003, 6, 12);
-      const grip = new THREE.Mesh(gripGeo, gripMat);
-      grip.position.set(0, 0, gi);
-      grip.rotation.y = Math.PI / 2;
-      flashlightMesh.add(grip);
+    function createDesk(dx, dz, angleY = 0) {
+      const deskGroup = new THREE.Group();
+      deskGroup.position.set(dx, 0, dz);
+      deskGroup.rotation.y = angleY;
+      // Плот
+      const top = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.05, 0.7), deskTopMat);
+      top.position.y = 0.75;
+      top.castShadow = true;
+      deskGroup.add(top);
+      // Крака
+      const legMat = new THREE.MeshStandardMaterial({ color: 0x3e2723, roughness: 0.8 });
+      for (let lx of [-0.5, 0.5]) {
+        for (let lz of [-0.3, 0.3]) {
+          const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.03, 0.7, 6), legMat);
+          leg.position.set(lx, 0.35, lz);
+          deskGroup.add(leg);
+        }
+      }
+      scene.add(deskGroup);
+      // Collider
+      const coll = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.8, 0.7), new THREE.MeshBasicMaterial({ visible: false }));
+      coll.position.set(dx, 0.4, dz);
+      coll.rotation.y = angleY;
+      scene.add(coll);
+      levelMap.push(coll);
     }
     
-    // Pre-задна капачка
-    const capGeo = new THREE.CylinderGeometry(0.022, 0.028, 0.02, 12);
-    const capMat = new THREE.MeshStandardMaterial({ color: 0x444444, metalness: 0.5, roughness: 0.4 });
-    const cap = new THREE.Mesh(capGeo, capMat);
-    cap.position.z = -0.09;
-    cap.rotation.x = Math.PI / 2;
-    flashlightMesh.add(cap);
+    createDesk(-7, 5);
+    createDesk(7, 5);
 
-    // Сребърна глава (конусна)
-    const headGeo = new THREE.CylinderGeometry(0.045, 0.025, 0.07, 12);
-    const headMat = new THREE.MeshStandardMaterial({ color: 0xaaaaaa, metalness: 0.8, roughness: 0.2 });
-    const head = new THREE.Mesh(headGeo, headMat);
-    head.position.z = 0.12;
-    head.rotation.x = Math.PI / 2;
-    flashlightMesh.add(head);
+    // === КОМПЮТЪРНИ МАСИ ===
+    function createComputerDesk(dx, dz) {
+      const group = new THREE.Group();
+      group.position.set(dx, 0, dz);
+      // Плот
+      const top = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.05, 0.8), deskTopMat);
+      top.position.y = 0.75;
+      top.castShadow = true;
+      group.add(top);
+      // Странични панели
+      const panelMat = new THREE.MeshStandardMaterial({ color: 0x3e3e4a, roughness: 0.6 });
+      const panel = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.7, 0.8), panelMat);
+      panel.position.set(-0.75, 0.4, 0);
+      group.add(panel);
+      const panel2 = panel.clone();
+      panel2.position.x = 0.75;
+      group.add(panel2);
+      // Монитор (черен правоъгълник)
+      const monitorMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.3 });
+      const scrMat = new THREE.MeshBasicMaterial({ color: 0x1a3a5a });
+      const scr = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.35, 0.02), scrMat);
+      scr.position.set(0, 0.9, -0.15);
+      group.add(scr);
+      const mon = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.37, 0.04), monitorMat);
+      mon.position.set(0, 0.9, -0.15);
+      group.add(mon);
+      const stand = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.15, 0.04), monitorMat);
+      stand.position.set(0, 0.65, -0.15);
+      group.add(stand);
+      scene.add(group);
+      const coll = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.8, 0.8), new THREE.MeshBasicMaterial({ visible: false }));
+      coll.position.set(dx, 0.4, dz);
+      scene.add(coll);
+      levelMap.push(coll);
+    }
+    createComputerDesk(-8, -6);
+    createComputerDesk(8, -6);
 
-    // Светещо жълто стъкло (леща) на върха
-    const lensGeo = new THREE.SphereGeometry(0.035, 10, 8);
-    const lensMat = new THREE.MeshBasicMaterial({ color: 0xffeb3b });
-    const lens = new THREE.Mesh(lensGeo, lensMat);
-    lens.position.z = 0.16;
-    flashlightMesh.add(lens);
-    
-    // Външен пръстен около лещата
-    const rimGeo = new THREE.TorusGeometry(0.038, 0.005, 6, 12);
-    const rimMat = new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.7, roughness: 0.3 });
-    const rim = new THREE.Mesh(rimGeo, rimMat);
-    rim.position.z = 0.155;
-    rim.rotation.y = Math.PI / 2;
-    flashlightMesh.add(rim);
+    // === КОЛОНИ ===
+    const colMat = new THREE.MeshStandardMaterial({ color: 0x8a7f7a, roughness: 0.7 });
+    const colBaseMat = new THREE.MeshStandardMaterial({ color: 0x6d5f5a, roughness: 0.8 });
+    function createColumn(cx, cz) {
+      const colGeo = new THREE.CylinderGeometry(0.3, 0.35, 4.5, 10);
+      const col = new THREE.Mesh(colGeo, colMat);
+      col.position.set(cx, 2.25, cz);
+      col.castShadow = true;
+      scene.add(col);
+      const base = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 0.08, 10), colBaseMat);
+      base.position.set(cx, 0.04, cz);
+      scene.add(base);
+      const cap = base.clone();
+      cap.position.y = 4.5;
+      scene.add(cap);
+      const coll = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.35, 4.5, 6), new THREE.MeshBasicMaterial({ visible: false }));
+      coll.position.set(cx, 2.25, cz);
+      scene.add(coll);
+      levelMap.push(coll);
+    }
+    createColumn(-9, -9);
+    createColumn(9, -9);
 
-    // Червено копче за включване (по-голямо и видимо)
-    const switchGeo = new THREE.BoxGeometry(0.012, 0.006, 0.02);
-    const switchMat = new THREE.MeshStandardMaterial({ color: 0xcc2222, roughness: 0.5 });
-    const sw = new THREE.Mesh(switchGeo, switchMat);
-    sw.position.set(0, 0.028, 0.02);
-    flashlightMesh.add(sw);
+    // === ДИВАН ===
+    const sofaMat = new THREE.MeshStandardMaterial({ color: 0x4a3a2a, roughness: 0.8 });
+    const cushionMat = new THREE.MeshStandardMaterial({ color: 0x5a4a3a, roughness: 0.9 });
+    function createSofa(sx, sz, rot) {
+      const g = new THREE.Group();
+      g.position.set(sx, 0, sz);
+      g.rotation.y = rot;
+      const base = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.3, 0.7), sofaMat);
+      base.position.set(0, 0.15, 0);
+      base.castShadow = true;
+      g.add(base);
+      const back = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.4, 0.12), sofaMat);
+      back.position.set(0, 0.4, -0.3);
+      g.add(back);
+      for (let side of [-1, 1]) {
+        const arm = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.25, 0.7), sofaMat);
+        arm.position.set(side * 0.8, 0.2, 0);
+        g.add(arm);
+      }
+      const seat = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.08, 0.55), cushionMat);
+      seat.position.set(0, 0.33, 0.03);
+      g.add(seat);
+      scene.add(g);
+      const coll = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.5, 0.7), new THREE.MeshBasicMaterial({ visible: false }));
+      coll.position.set(sx, 0.25, sz);
+      coll.rotation.y = rot;
+      scene.add(coll);
+      levelMap.push(coll);
+    }
+    createSofa(-5, -8, 0);
+    createSofa(5, -8, 0);
 
-    flashlightMesh.position.set(0, 0.85, 4);
+    // === ВИТРИНА (стъклена) ===
+    const glassMat = new THREE.MeshStandardMaterial({ color: 0xcccccc, transparent: true, opacity: 0.3, roughness: 0.1 });
+    const caseMat = new THREE.MeshStandardMaterial({ color: 0x3d2314, roughness: 0.7 });
+    const caseGroup = new THREE.Group();
+    caseGroup.position.set(0, 0, -12);
+    const caseBase = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.04, 0.6), caseMat);
+    caseBase.position.y = 0.02;
+    caseGroup.add(caseBase);
+    const caseGlass = new THREE.Mesh(new THREE.BoxGeometry(0.76, 0.35, 0.56), glassMat);
+    caseGlass.position.y = 0.2;
+    caseGroup.add(caseGlass);
+    const caseLid = new THREE.Mesh(new THREE.BoxGeometry(0.82, 0.02, 0.62), caseMat);
+    caseLid.position.y = 0.38;
+    caseGroup.add(caseLid);
+    scene.add(caseGroup);
+    const caseColl = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.4, 0.6), new THREE.MeshBasicMaterial({ visible: false }));
+    caseColl.position.set(0, 0.2, -12);
+    scene.add(caseColl);
+    levelMap.push(caseColl);
+
+    // === СТОЛЧЕТА КЪМ БЮРАТА ===
+    const chairMat = new THREE.MeshStandardMaterial({ color: 0x3e2723, roughness: 0.8 });
+    const seatMat = new THREE.MeshStandardMaterial({ color: 0x4e342e, roughness: 0.9 });
+    function createChair(cx, cz, rot) {
+      const g = new THREE.Group();
+      g.position.set(cx, 0, cz);
+      g.rotation.y = rot;
+      const seat = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.05, 0.3), seatMat);
+      seat.position.y = 0.4;
+      g.add(seat);
+      const back = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.25, 0.03), chairMat);
+      back.position.set(0, 0.55, -0.15);
+      g.add(back);
+      for (let side of [-1, 1]) {
+        const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.02, 0.4, 4), chairMat);
+        leg.position.set(side * 0.12, 0.2, 0.12);
+        g.add(leg);
+        const backLeg = leg.clone();
+        backLeg.position.z = -0.12;
+        g.add(backLeg);
+      }
+      scene.add(g);
+      const coll = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.45, 0.35), new THREE.MeshBasicMaterial({ visible: false }));
+      coll.position.set(cx, 0.22, cz);
+      coll.rotation.y = rot;
+      scene.add(coll);
+      levelMap.push(coll);
+    }
+    createChair(-7, 4.3, 0);
+    createChair(7, 4.3, 0);
+
+    // === ФЕНЕРЧЕ (скрито на бюро, под книга) ===
+    const flashlightMesh = new THREE.Group();
+    const fHandleMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.6 });
+    const fHeadMat = new THREE.MeshStandardMaterial({ color: 0xaaaaaa, metalness: 0.8, roughness: 0.2 });
+    const fLensMat = new THREE.MeshBasicMaterial({ color: 0xffeb3b });
+    const fSwitchMat = new THREE.MeshStandardMaterial({ color: 0xcc2222, roughness: 0.5 });
+    const handle1 = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.023, 0.18, 8), fHandleMat);
+    handle1.rotation.x = Math.PI / 2; flashlightMesh.add(handle1);
+    const head1 = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.025, 0.07, 8), fHeadMat);
+    head1.position.z = 0.12; head1.rotation.x = Math.PI / 2; flashlightMesh.add(head1);
+    const lens1 = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), fLensMat);
+    lens1.position.z = 0.16; flashlightMesh.add(lens1);
+    const sw1 = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.006, 0.02), fSwitchMat);
+    sw1.position.set(0, 0.028, 0.02); flashlightMesh.add(sw1);
+    // Поставяме на бюрото вдясно, полускрит зад книга
+    flashlightMesh.position.set(-7.4, 0.78, 4.8);
+    flashlightMesh.rotation.x = -0.3;
+    flashlightMesh.rotation.z = 0.4;
     scene.add(flashlightMesh);
+    // Книга върху фенерчето (прикритие) — малка кутия
+    const bookHideMat = new THREE.MeshStandardMaterial({ color: 0x8B4513, roughness: 0.7 });
+    const bookHide = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.12, 0.18), bookHideMat);
+    bookHide.position.set(-7.3, 0.85, 4.9);
+    bookHide.rotation.y = 0.3;
+    scene.add(bookHide);
 
     interactiveObjects.push({
       type: 'item',
