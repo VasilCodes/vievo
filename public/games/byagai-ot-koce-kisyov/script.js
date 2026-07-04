@@ -37,8 +37,8 @@ const keys = { w: false, a: false, s: false, d: false, shift: false, ctrl: false
 const koce = {
   mesh: null,
   position: new THREE.Vector3(15, 0, 15),
-  speed: 0.04,
-  chaseSpeed: 0.09,
+  speed: 0.032,
+  chaseSpeed: 0.07,
   state: 'patrol', // patrol, search, chase
   lastKnownPlayerPos: null,
   searchTimer: 0,
@@ -791,11 +791,34 @@ function createCharacterModel(shirtColorHex, accessory = 'none', pantsColorHex =
     hat.rotation.y = Math.PI / 4;
     group.add(hat);
   } else if (accessory === 'glasses') {
-    const glassesGeo = new THREE.BoxGeometry(0.26, 0.04, 0.04);
-    const glassesMat = new THREE.MeshStandardMaterial({ color: 0x000000, roughness: 0.1 });
-    const glasses = new THREE.Mesh(glassesGeo, glassesMat);
-    glasses.position.set(0, 0.88, 0.13);
-    group.add(glasses);
+    const glassesGroup = new THREE.Group();
+    const frameMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.2 });
+    
+    // Ляв кръг рамка
+    const leftRing = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.07, 0.02), frameMat);
+    leftRing.position.set(-0.06, 0.88, 0.13);
+    glassesGroup.add(leftRing);
+    
+    // Десен кръг рамка
+    const rightRing = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.07, 0.02), frameMat);
+    rightRing.position.set(0.06, 0.88, 0.13);
+    glassesGroup.add(rightRing);
+    
+    // Свързващ мост
+    const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.015, 0.015), frameMat);
+    bridge.position.set(0, 0.89, 0.13);
+    glassesGroup.add(bridge);
+    
+    // Странични дръжки
+    const templeGeo = new THREE.BoxGeometry(0.015, 0.015, 0.16);
+    const leftTemple = new THREE.Mesh(templeGeo, frameMat);
+    leftTemple.position.set(-0.115, 0.88, 0.05);
+    const rightTemple = leftTemple.clone();
+    rightTemple.position.x = 0.115;
+    glassesGroup.add(leftTemple);
+    glassesGroup.add(rightTemple);
+    
+    group.add(glassesGroup);
   } else if (accessory === 'horns') {
     const hornGeo = new THREE.ConeGeometry(0.04, 0.1, 4);
     const hornMat = new THREE.MeshStandardMaterial({ color: 0xff3333 });
@@ -1197,19 +1220,41 @@ function buildLevel(level) {
       radius: 1.5
     });
 
-    // Изходен ключ (на втория етаж в тъмното)
-    const keyGeo = new THREE.BoxGeometry(0.05, 0.02, 0.12);
-    const keyMat = new THREE.MeshStandardMaterial({ color: 0xffd700 });
-    const keyMesh = new THREE.Mesh(keyGeo, keyMat);
+    // Изходен ключ (на втория етаж в тъмното) - красив 3D модел на ключ
+    const keyMesh = new THREE.Group();
+    const goldMat = new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.8, roughness: 0.15 });
+
+    // Кръгла глава на ключа
+    const ringGeo = new THREE.CylinderGeometry(0.04, 0.04, 0.015, 12);
+    const ring = new THREE.Mesh(ringGeo, goldMat);
+    ring.rotation.x = Math.PI / 2;
+    keyMesh.add(ring);
+
+    // Основно стебло на ключа
+    const shaftGeo = new THREE.CylinderGeometry(0.01, 0.01, 0.12, 8);
+    const shaft = new THREE.Mesh(shaftGeo, goldMat);
+    shaft.position.z = -0.06;
+    shaft.rotation.x = Math.PI / 2;
+    keyMesh.add(shaft);
+
+    // Зъбчета на ключа
+    const tooth1 = new THREE.Mesh(new THREE.BoxGeometry(0.01, 0.02, 0.01), goldMat);
+    tooth1.position.set(0, -0.015, -0.11);
+    const tooth2 = new THREE.Mesh(new THREE.BoxGeometry(0.01, 0.012, 0.01), goldMat);
+    tooth2.position.set(0, -0.011, -0.09);
+    keyMesh.add(tooth1);
+    keyMesh.add(tooth2);
+
     keyMesh.position.set(4, 2.65, -10);
     scene.add(keyMesh);
+
     interactiveObjects.push({
       type: 'item',
       name: 'Ключ за врата',
       itemId: 'door_key',
       icon: 'fa-key',
       mesh: keyMesh,
-      radius: 0.5
+      radius: 0.6
     });
 
   } else if (level === 2) {
@@ -1616,24 +1661,33 @@ function handlePlayerMovement(delta) {
     moveDir.normalize();
 
     const prevPos = player.position.clone();
-    player.position.addScaledVector(moveDir, speed);
 
-    // Simple bounding collision checks against levelMap walls
-    let collision = false;
-    levelMap.forEach(mesh => {
-      if (mesh === levelMap[0] || mesh === levelMap[1]) return; // ignore floor and ceil
-      const box = new THREE.Box3().setFromObject(mesh);
-      const playerBox = new THREE.Box3(
-        new THREE.Vector3(player.position.x - 0.25, player.position.y - player.height, player.position.z - 0.25),
-        new THREE.Vector3(player.position.x + 0.25, player.position.y + 0.4, player.position.z + 0.25)
-      );
-      if (box.intersectsBox(playerBox)) {
-        collision = true;
-      }
-    });
+    const checkPlayerCollision = () => {
+      let collision = false;
+      levelMap.forEach(mesh => {
+        if (mesh === levelMap[0] || mesh === levelMap[1]) return; // ignore floor and ceil
+        const box = new THREE.Box3().setFromObject(mesh);
+        const playerBox = new THREE.Box3(
+          new THREE.Vector3(player.position.x - 0.25, player.position.y - player.height, player.position.z - 0.25),
+          new THREE.Vector3(player.position.x + 0.25, player.position.y + 0.4, player.position.z + 0.25)
+        );
+        if (box.intersectsBox(playerBox)) {
+          collision = true;
+        }
+      });
+      return collision;
+    };
 
-    if (collision) {
-      player.position.copy(prevPos);
+    // Опит за преместване по ос X
+    player.position.x += moveDir.x * speed;
+    if (checkPlayerCollision()) {
+      player.position.x = prevPos.x;
+    }
+
+    // Опит за преместване по ос Z
+    player.position.z += moveDir.z * speed;
+    if (checkPlayerCollision()) {
+      player.position.z = prevPos.z;
     }
   }
 
@@ -1801,7 +1855,9 @@ function updateKoceAI(delta) {
   }
 
   // Game over check
-  if (distToPlayer < 0.95 && !player.hiding) {
+  const horizontalDistToPlayer = new THREE.Vector2(koce.position.x, koce.position.z).distanceTo(new THREE.Vector2(player.position.x, player.position.z));
+  const verticalDistToPlayer = Math.abs(koce.position.y - (player.position.y - player.height));
+  if (horizontalDistToPlayer < 1.2 && verticalDistToPlayer < 1.5 && !player.hiding) {
     player.hearts--;
     updateHeartsHUD();
     
