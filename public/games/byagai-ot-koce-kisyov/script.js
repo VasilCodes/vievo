@@ -1430,15 +1430,15 @@ function buildLevel(level) {
     createComputerDesk(8, -6);
 
     // === КОЛОНИ ===
-    const colMat = new THREE.MeshStandardMaterial({ color: 0x8a7f7a, roughness: 0.7 });
-    const colBaseMat = new THREE.MeshStandardMaterial({ color: 0x6d5f5a, roughness: 0.8 });
+    const pillarMat = new THREE.MeshStandardMaterial({ color: 0x8a7f7a, roughness: 0.7 });
+    const pillarBaseMat = new THREE.MeshStandardMaterial({ color: 0x6d5f5a, roughness: 0.8 });
     function createColumn(cx, cz) {
       const colGeo = new THREE.CylinderGeometry(0.3, 0.35, 4.5, 10);
-      const col = new THREE.Mesh(colGeo, colMat);
+      const col = new THREE.Mesh(colGeo, pillarMat);
       col.position.set(cx, 2.25, cz);
       col.castShadow = true;
       scene.add(col);
-      const base = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 0.08, 10), colBaseMat);
+      const base = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 0.08, 10), pillarBaseMat);
       base.position.set(cx, 0.04, cz);
       scene.add(base);
       const cap = base.clone();
@@ -1451,6 +1451,8 @@ function buildLevel(level) {
     }
     createColumn(-9, -9);
     createColumn(9, -9);
+    createColumn(-9, 9);
+    createColumn(9, 9);
 
     // === ДИВАН ===
     const sofaMat = new THREE.MeshStandardMaterial({ color: 0x4a3a2a, roughness: 0.8 });
