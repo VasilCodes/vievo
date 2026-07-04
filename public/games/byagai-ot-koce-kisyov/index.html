@@ -3,76 +3,125 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Бягай от Коце Кисьов</title>
+  <title>Избягай от Коце Кисьов</title>
+  <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      width: 100%; height: 100vh;
-      background: #050508;
-      color: #f3f4f6;
-      font-family: 'Segoe UI', Roboto, sans-serif;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      overflow: hidden;
-    }
-    .container {
-      text-align: center;
-      padding: 2rem;
-    }
-    .title {
-      font-size: 2.5rem;
-      font-weight: 800;
-      color: #ef5350;
-      text-shadow: 0 0 40px rgba(239, 83, 80, 0.3);
-      margin-bottom: 1rem;
-    }
-    .subtitle {
-      font-size: 1.2rem;
-      color: #71717a;
-      margin-bottom: 2rem;
-    }
-    .construction-icon {
-      font-size: 4rem;
-      color: #f59e0b;
-      margin-bottom: 1.5rem;
-      animation: pulse 2s ease-in-out infinite;
-    }
-    @keyframes pulse {
-      0%, 100% { transform: scale(1); opacity: 0.7; }
-      50% { transform: scale(1.1); opacity: 1; }
-    }
-    .loader {
-      display: flex;
-      justify-content: center;
-      gap: 0.5rem;
-      margin-top: 2rem;
-    }
-    .loader span {
-      width: 12px; height: 12px;
-      border-radius: 50%;
-      background: #ef5350;
-      animation: bounce 1.4s ease-in-out infinite both;
-    }
-    .loader span:nth-child(1) { animation-delay: -0.32s; }
-    .loader span:nth-child(2) { animation-delay: -0.16s; }
-    .loader span:nth-child(3) { animation-delay: 0s; }
-    @keyframes bounce {
-      0%, 80%, 100% { transform: scale(0); }
-      40% { transform: scale(1); }
-    }
-  </style>
 </head>
 <body>
-  <div class="container">
-    <div class="construction-icon"><i class="fas fa-hard-hat"></i></div>
-    <div class="title">Бягай от Коце Кисьов</div>
-    <div class="subtitle">Играта е в процес на разработка</div>
-    <div class="subtitle" style="font-size: 1rem; color: #52525b;">Ще бъде достъпна скоро</div>
-    <div class="loader">
-      <span></span><span></span><span></span>
+  <div id="gameContainer">
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- HUD -->
+    <div id="hud">
+      <!-- Crosshair -->
+      <div class="crosshair" id="crosshair">+</div>
+
+      <!-- Interaction Prompt -->
+      <div id="interactionPrompt"><span>[E]</span></div>
+
+      <!-- Top Bar -->
+      <div id="topBar">
+        <div id="noiseWave">
+          <span></span><span></span><span></span><span></span><span></span>
+        </div>
+        <div id="gameTimer"><i class="fas fa-clock"></i> <span id="timeDisplay">00:00</span></div>
+        <div id="creditsDisplay"><i class="fas fa-coins"></i> <span id="creditsAmount">0</span></div>
+      </div>
+
+      <!-- Stamina & Battery -->
+      <div id="bottomBars">
+        <div id="staminaGroup">
+          <i class="fas fa-running"></i>
+          <div id="staminaBarBg"><div id="staminaBar"></div></div>
+        </div>
+        <div id="batteryBarGroup">
+          <i class="fas fa-battery-three-quarters" id="batteryIcon"></i>
+          <div id="batteryBarBg"><div id="batteryBar"></div></div>
+        </div>
+      </div>
+
+      <!-- Hotbar -->
+      <div id="hotbar">
+        <div class="hotbar-slot active" id="slot-1"><span class="hotbar-slot-key">1</span></div>
+        <div class="hotbar-slot" id="slot-2"><span class="hotbar-slot-key">2</span></div>
+        <div class="hotbar-slot" id="slot-3"><span class="hotbar-slot-key">3</span></div>
+        <div class="hotbar-slot" id="slot-4"><span class="hotbar-slot-key">4</span></div>
+      </div>
+
+      <!-- Hearts -->
+      <div id="heartsContainer"></div>
+
+      <!-- Held Item Display -->
+      <div id="heldItemDisplay"></div>
     </div>
+
+    <!-- Menus -->
+    <div id="mainMenu">
+      <div class="menu-content">
+        <div class="menu-title">Избягай от<br>Коце Кисьов</div>
+        <div class="menu-subtitle">3D приключение с бягане и крийене</div>
+        <button class="btn btn-primary" onclick="startGame()"><i class="fas fa-play"></i> Започни</button>
+        <button class="btn btn-secondary" onclick="openShop()"><i class="fas fa-store"></i> Магазин</button>
+        <button class="btn btn-secondary" onclick="openLeaderboard()"><i class="fas fa-trophy"></i> Класация</button>
+        <div id="menuCredits" style="margin-top:1rem; color:#ffd700; font-size:1.1rem;">
+          <i class="fas fa-coins"></i> <span id="menuCreditsAmount">0</span>
+        </div>
+      </div>
+    </div>
+
+    <div id="shopOverlay" class="overlay">
+      <div class="overlay-content">
+        <h2><i class="fas fa-store"></i> Магазин</h2>
+        <div id="shopTabs">
+          <button class="tab-btn active" data-tab="skins">Скинове</button>
+          <button class="tab-btn" data-tab="upgrades">Ъпгрейди</button>
+          <button class="tab-btn" data-tab="koce">Аксесоари за Коце</button>
+        </div>
+        <div id="shopItems" class="shop-grid"></div>
+        <div id="shopCredits" style="margin-top:1rem; color:#ffd700;"><i class="fas fa-coins"></i> <span id="shopCreditsAmount">0</span></div>
+        <button class="btn btn-secondary" onclick="closeShop()" style="margin-top:1rem;"><i class="fas fa-times"></i> Затвори</button>
+      </div>
+    </div>
+
+    <div id="leaderboardOverlay" class="overlay">
+      <div class="overlay-content">
+        <h2><i class="fas fa-trophy"></i> Класация</h2>
+        <div id="leaderboardList"></div>
+        <button class="btn btn-secondary" onclick="closeLeaderboard()" style="margin-top:1rem;"><i class="fas fa-times"></i> Затвори</button>
+      </div>
+    </div>
+
+    <div id="victoryOverlay" class="overlay">
+      <div class="overlay-content">
+        <div class="victory-title">Избяга!</div>
+        <p>Успя да се измъкнеш от Коце!</p>
+        <div id="victoryStats" style="margin:1rem 0;">
+          <div>Време: <span id="victoryTime">0с</span></div>
+          <div>Награда: <span id="victoryReward"><i class="fas fa-coins"></i> +25</span></div>
+          <div>Опит: <span id="victoryXP">+50 XP</span></div>
+        </div>
+        <div style="display:flex;gap:1rem;">
+          <button class="btn btn-primary" onclick="closeVictory()"><i class="fas fa-check"></i> Продължи</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="gameOverOverlay" class="overlay">
+      <div class="overlay-content">
+        <div class="gameover-title">ХВАНА ТЕ!</div>
+        <p>Коце Кисьов те спипа!</p>
+        <button class="btn btn-primary" onclick="restartGame()"><i class="fas fa-redo"></i> Опитай пак</button>
+        <button class="btn btn-secondary" onclick="backToMenu()"><i class="fas fa-home"></i> Меню</button>
+      </div>
+    </div>
+
+    <div id="toastContainer"></div>
   </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>
