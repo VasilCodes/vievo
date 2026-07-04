@@ -65,6 +65,8 @@ let ownedSkins = ['default'];
 let shopItems = [];
 let dailyQuests = [];
 let previewScene, previewCamera, previewRenderer, previewMesh;
+let playerCustomStyle = { shirtColor: '#4caf50', pantsColor: '#1d3557', hairStyle: 'brown_short' };
+let gamePaused = false;
 
 // Sound Synth (Web Audio API)
 let audioCtx = null;
@@ -183,6 +185,20 @@ auth.onAuthStateChanged(async (user) => {
         userXP = d.xp || 0;
         userLevel = d.level || 1;
         
+        // Зареждане на къстъмизирания скин на играча
+        if (!d.characterStyle) {
+          document.getElementById('characterCreatorOverlay').style.display = 'flex';
+          initCreatorPreviewScene();
+        } else {
+          playerCustomStyle = d.characterStyle;
+          closetShirtColor = playerCustomStyle.shirtColor || '#4caf50';
+          closetPantsColor = playerCustomStyle.pantsColor || '#1d3557';
+          const closetHairEl = document.getElementById('closetHair');
+          if (closetHairEl) closetHairEl.value = playerCustomStyle.hairStyle || 'brown_short';
+        }
+
+        player.activeSkin = d.equippedSkin || 'default';
+        
         // Check if admin / owner to display dev panel and admin add offer buttons
         const isAdmin = d.role === 'admin' || d.role === 'owner';
         document.getElementById('devConsoleLink').style.display = isAdmin ? 'block' : 'none';
@@ -197,6 +213,7 @@ auth.onAuthStateChanged(async (user) => {
         
         updateMenuProfileUI();
         loadShopItems();
+        updateMenuPreview();
       }
     });
 
@@ -307,11 +324,17 @@ function selectShopItem(itemId) {
   if (isOwned) {
     costEl.textContent = "Екипирай скин";
     costEl.style.color = '#4caf50';
-    costEl.onclick = () => {
-      // Skin equip
-      player.speedMultiplier = item.stats?.speed || 1.0;
-      player.noiseMultiplier = item.stats?.noise || 1.0;
-      playSound('click');
+    costEl.onclick = async () => {
+      try {
+        await db.collection('users').doc(currentUser.uid).update({ equippedSkin: itemId });
+        player.speedMultiplier = item.stats?.speed || 1.0;
+        player.noiseMultiplier = item.stats?.noise || 1.0;
+        showNotification(`Скинът "${item.name}" е екипиран!`);
+        playSound('click');
+        updateMenuPreview();
+      } catch (err) {
+        console.error(err);
+      }
     };
   } else {
     costEl.textContent = `Купи за ${item.cost_credits} 💰`;
@@ -591,55 +614,190 @@ function initPreviewScene() {
   });
 }
 
+function updateMenuPreview() {
+  let color = playerCustomStyle.shirtColor;
+  let accessory = 'none';
+  let pants = playerCustomStyle.pantsColor;
+  let hair = playerCustomStyle.hairStyle;
+
+  if (player.activeSkin !== 'default') {
+    const equipped = shopItems.find(i => i.item_id === player.activeSkin);
+    if (equipped) {
+      color = equipped.model_color || '#4caf50';
+      accessory = equipped.accessory || 'none';
+    }
+  }
+
+  if (previewMesh) {
+    previewScene.remove(previewMesh);
+  }
+  previewMesh = createCharacterModel(color, accessory, pants, hair);
+  previewScene.add(previewMesh);
+}
+
 function updateSkinPreview(colorHex, accessory) {
   if (previewMesh) {
     previewScene.remove(previewMesh);
   }
-  previewMesh = createCharacterModel(colorHex, accessory);
+  previewMesh = createCharacterModel(colorHex, accessory, playerCustomStyle.pantsColor, playerCustomStyle.hairStyle);
   previewScene.add(previewMesh);
 }
 
-function createCharacterModel(colorHex, accessory) {
+function createCharacterModel(shirtColorHex, accessory = 'none', pantsColorHex = '#1d3557', hairStyle = 'brown_short') {
   const group = new THREE.Group();
-  const material = new THREE.MeshStandardMaterial({ color: new THREE.Color(colorHex), roughness: 0.5 });
+  
+  const shirtMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(shirtColorHex), roughness: 0.5 });
+  const skinMat = new THREE.MeshStandardMaterial({ color: 0xffdbac, roughness: 0.6 }); // skin tone
+  const pantsMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(pantsColorHex), roughness: 0.7 });
+  const shoeMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.8 }); // black shoes
   
   // Body (Box)
   const bodyGeo = new THREE.BoxGeometry(0.35, 0.55, 0.2);
-  const body = new THREE.Mesh(bodyGeo, material);
+  const body = new THREE.Mesh(bodyGeo, shirtMat);
   body.position.y = 0.45;
+  body.castShadow = true;
+  body.receiveShadow = true;
   group.add(body);
 
+  // Neck (small flesh box on top of body)
+  const neckGeo = new THREE.BoxGeometry(0.1, 0.06, 0.1);
+  const neck = new THREE.Mesh(neckGeo, skinMat);
+  neck.position.set(0, 0.73, 0);
+  group.add(neck);
+
   // Head (Box)
-  const headGeo = new THREE.BoxGeometry(0.22, 0.22, 0.22);
-  const headMat = new THREE.MeshStandardMaterial({ color: 0xffdbac }); // Skin color
-  const head = new THREE.Mesh(headGeo, headMat);
+  const headGeo = new THREE.BoxGeometry(0.24, 0.24, 0.24);
+  const head = new THREE.Mesh(headGeo, skinMat);
   head.position.y = 0.85;
+  head.castShadow = true;
   group.add(head);
 
-  // Legs (Boxes)
+  // Eyes (Two small boxes on the front face of head)
+  const eyeGeo = new THREE.BoxGeometry(0.03, 0.03, 0.01);
+  const eyeMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+  const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
+  leftEye.position.set(-0.06, 0.88, 0.125);
+  const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
+  rightEye.position.set(0.06, 0.88, 0.125);
+  group.add(leftEye);
+  group.add(rightEye);
+
+  // Mouth (Small red box)
+  const mouthGeo = new THREE.BoxGeometry(0.06, 0.02, 0.01);
+  const mouthMat = new THREE.MeshBasicMaterial({ color: 0xe63946 });
+  const mouth = new THREE.Mesh(mouthGeo, mouthMat);
+  mouth.position.set(0, 0.79, 0.125);
+  group.add(mouth);
+
+  // Hair Styles
+  let hairColor = 0x5c4033; // Default brown
+  if (hairStyle === 'black_spiky') hairColor = 0x111111;
+  else if (hairStyle === 'blonde_long') hairColor = 0xf5e3a0;
+  
+  if (hairStyle !== 'bald') {
+    const hairMat = new THREE.MeshStandardMaterial({ color: hairColor, roughness: 0.8 });
+    
+    // Main hair cap
+    const capGeo = new THREE.BoxGeometry(0.26, 0.08, 0.26);
+    const cap = new THREE.Mesh(capGeo, hairMat);
+    cap.position.set(0, 0.98, 0);
+    group.add(cap);
+
+    // Back hair flap
+    const backGeo = new THREE.BoxGeometry(0.26, 0.16, 0.06);
+    const backFlap = new THREE.Mesh(backGeo, hairMat);
+    backFlap.position.set(0, 0.88, -0.1);
+    group.add(backFlap);
+
+    if (hairStyle === 'black_spiky') {
+      // Add spiky segments
+      const spikeGeo = new THREE.BoxGeometry(0.04, 0.06, 0.04);
+      for (let offset = -0.08; offset <= 0.08; offset += 0.08) {
+        const spike = new THREE.Mesh(spikeGeo, hairMat);
+        spike.position.set(offset, 1.03, 0.04);
+        spike.rotation.z = offset * -2;
+        group.add(spike);
+      }
+    } else if (hairStyle === 'blonde_long') {
+      // Add side cascades hanging down
+      const sideGeo = new THREE.BoxGeometry(0.04, 0.3, 0.24);
+      const leftSide = new THREE.Mesh(sideGeo, hairMat);
+      leftSide.position.set(-0.13, 0.79, 0.01);
+      const rightSide = leftSide.clone();
+      rightSide.position.x = 0.13;
+      group.add(leftSide);
+      group.add(rightSide);
+    }
+  }
+
+  // Arms (Left & Right)
+  const armGeo = new THREE.BoxGeometry(0.08, 0.45, 0.08);
+  const leftArm = new THREE.Mesh(armGeo, shirtMat);
+  leftArm.position.set(-0.22, 0.45, 0);
+  leftArm.castShadow = true;
+  
+  // Hand (skin colored end of arm)
+  const handGeo = new THREE.BoxGeometry(0.08, 0.08, 0.08);
+  const leftHand = new THREE.Mesh(handGeo, skinMat);
+  leftHand.position.set(-0.22, 0.2, 0);
+  group.add(leftHand);
+
+  const rightArm = leftArm.clone();
+  rightArm.position.x = 0.22;
+  const rightHand = leftHand.clone();
+  rightHand.position.x = 0.22;
+
+  group.add(leftArm);
+  group.add(rightArm);
+  group.add(rightHand);
+
+  // Legs (Left & Right)
   const legGeo = new THREE.BoxGeometry(0.12, 0.35, 0.12);
-  const legMat = new THREE.MeshStandardMaterial({ color: 0x1d3557 }); // Jeans Blue
-  const leftLeg = new THREE.Mesh(legGeo, legMat);
-  leftLeg.position.set(-0.1, 0.175, 0);
-  const rightLeg = leftLeg.clone();
-  rightLeg.position.x = 0.1;
+  const leftLeg = new THREE.Mesh(legGeo, pantsMat);
+  leftLeg.position.set(-0.09, 0.175, 0);
+  leftLeg.castShadow = true;
   group.add(leftLeg);
+
+  const rightLeg = leftLeg.clone();
+  rightLeg.position.x = 0.09;
   group.add(rightLeg);
 
-  // Accessory Attachments
+  // Shoes (Black blocks under legs)
+  const shoeGeo = new THREE.BoxGeometry(0.12, 0.06, 0.16);
+  const leftShoe = new THREE.Mesh(shoeGeo, shoeMat);
+  leftShoe.position.set(-0.09, 0.03, 0.02);
+  leftShoe.castShadow = true;
+  group.add(leftShoe);
+
+  const rightShoe = leftShoe.clone();
+  rightShoe.position.x = 0.09;
+  group.add(rightShoe);
+
+  // Accessories
   if (accessory === 'hat') {
     const hatGeo = new THREE.ConeGeometry(0.15, 0.2, 4);
-    const hatMat = new THREE.MeshStandardMaterial({ color: 0xffd700 });
+    const hatMat = new THREE.MeshStandardMaterial({ color: 0xffd700, roughness: 0.2 });
     const hat = new THREE.Mesh(hatGeo, hatMat);
-    hat.position.y = 1.0;
+    hat.position.y = 1.06;
     hat.rotation.y = Math.PI / 4;
     group.add(hat);
   } else if (accessory === 'glasses') {
-    const glassesGeo = new THREE.BoxGeometry(0.24, 0.05, 0.05);
-    const glassesMat = new THREE.MeshStandardMaterial({ color: 0x000000 });
+    const glassesGeo = new THREE.BoxGeometry(0.26, 0.04, 0.04);
+    const glassesMat = new THREE.MeshStandardMaterial({ color: 0x000000, roughness: 0.1 });
     const glasses = new THREE.Mesh(glassesGeo, glassesMat);
-    glasses.position.set(0, 0.86, 0.12);
+    glasses.position.set(0, 0.88, 0.13);
     group.add(glasses);
+  } else if (accessory === 'horns') {
+    const hornGeo = new THREE.ConeGeometry(0.04, 0.1, 4);
+    const hornMat = new THREE.MeshStandardMaterial({ color: 0xff3333 });
+    const leftHorn = new THREE.Mesh(hornGeo, hornMat);
+    leftHorn.position.set(-0.08, 1.0, 0.06);
+    leftHorn.rotation.set(0.2, 0, -0.4);
+    const rightHorn = leftHorn.clone();
+    rightHorn.position.x = 0.08;
+    rightHorn.rotation.z = 0.4;
+    group.add(leftHorn);
+    group.add(rightHorn);
   }
 
   return group;
@@ -688,8 +846,7 @@ function initEngine() {
   buildLevel(currentLevel);
 
   // Setup Koce Mesh
-  const koceColor = '#ef5350';
-  koce.mesh = createCharacterModel(koceColor, 'none');
+  koce.mesh = createCharacterModel('#ef5350', 'glasses', '#1d3557', 'brown_short');
   scene.add(koce.mesh);
 
   resetPositions();
@@ -776,42 +933,97 @@ function buildLevel(level) {
   levelMap.push(rightWall);
 
   if (level === 1) {
-    // Generate Library Bookcases (Grid layout)
-    const shelfGeo = new THREE.BoxGeometry(6, 3, 0.8);
-    const shelfMat = new THREE.MeshStandardMaterial({ color: 0x3d2314, roughness: 0.6 });
+    showNotification("Намери фенерчето на 1-вия етаж и се качи по стълбите на тъмния 2-ри етаж за ключа!", "info");
 
-    for (let x = -8; x <= 8; x += 8) {
-      for (let z = -8; z <= 8; z += 8) {
-        if (x === 0 && z === 0) continue; // Spawn safe zone
-        const shelf = new THREE.Mesh(shelfGeo, shelfMat);
-        shelf.position.set(x, 1.5, z);
-        shelf.castShadow = true;
-        shelf.receiveShadow = true;
-        scene.add(shelf);
-        levelMap.push(shelf);
+    // Balcony / Mezzanine Floor (2nd Floor) at y = 2.5
+    const balconyGeo = new THREE.BoxGeometry(16, 0.15, 16);
+    const balconyMat = new THREE.MeshStandardMaterial({ color: 0x18181c, roughness: 0.8 });
+    const balcony = new THREE.Mesh(balconyGeo, balconyMat);
+    balcony.position.set(0, 2.5, -7);
+    balcony.receiveShadow = true;
+    scene.add(balcony);
+    levelMap.push(balcony);
 
-        // Books on shelf
-        const bookGeo = new THREE.BoxGeometry(0.1, 0.3, 0.2);
-        const bookMat = new THREE.MeshStandardMaterial({ color: 0x415a77 });
-        const book = new THREE.Mesh(bookGeo, bookMat);
-        book.position.set(x + (Math.random() - 0.5) * 4, 3.15, z);
-        book.castShadow = true;
-        scene.add(book);
-        
-        interactiveObjects.push({
-          type: 'fallable',
-          mesh: book,
-          radius: 0.35,
-          active: true
-        });
-      }
+    // Stairs connecting 1st and 2nd floor
+    for (let i = 0; i < 11; i++) {
+      const stepGeo = new THREE.BoxGeometry(2.5, 0.23, 0.45);
+      const step = new THREE.Mesh(stepGeo, balconyMat);
+      step.position.set(-5, 0.115 + i * 0.23, -1 + i * 0.45);
+      step.receiveShadow = true;
+      step.castShadow = true;
+      scene.add(step);
+      levelMap.push(step);
     }
 
-    // Add flashlight item
+    // Warm Lightbulbs / PointLights for 1st Floor
+    const bulbGeo = new THREE.SphereGeometry(0.12, 8, 8);
+    const bulbMat = new THREE.MeshBasicMaterial({ color: 0xffe0b2 });
+    
+    const lightPositions = [
+      new THREE.Vector3(4, 2.3, 5),
+      new THREE.Vector3(-4, 2.3, 5),
+      new THREE.Vector3(4, 2.3, -5)
+    ];
+
+    lightPositions.forEach(pos => {
+      const bulb = new THREE.Mesh(bulbGeo, bulbMat);
+      bulb.position.copy(pos);
+      scene.add(bulb);
+
+      const light = new THREE.PointLight(0xffd59a, 2.0, 10);
+      light.position.copy(pos);
+      light.castShadow = true;
+      scene.add(light);
+    });
+
+    // Bookshelves (Grid layout)
+    const shelfGeo = new THREE.BoxGeometry(5, 2.2, 0.8);
+    const shelfMat = new THREE.MeshStandardMaterial({ color: 0x3d2314, roughness: 0.6 });
+
+    // 1st Floor Bookshelves
+    for (let x = -8; x <= 8; x += 8) {
+      if (x === 0) continue;
+      const shelf = new THREE.Mesh(shelfGeo, shelfMat);
+      shelf.position.set(x, 1.1, 5);
+      shelf.castShadow = true;
+      shelf.receiveShadow = true;
+      scene.add(shelf);
+      levelMap.push(shelf);
+
+      // Falling books
+      const book = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.3, 0.2), new THREE.MeshStandardMaterial({ color: 0x415a77 }));
+      book.position.set(x + (Math.random() - 0.5) * 3, 2.35, 5);
+      book.castShadow = true;
+      scene.add(book);
+      interactiveObjects.push({ type: 'fallable', mesh: book, radius: 0.35, active: true });
+    }
+
+    // 2nd Floor (Balcony) Bookshelves - in dark
+    for (let x = -6; x <= 6; x += 4) {
+      const shelf = new THREE.Mesh(shelfGeo, shelfMat);
+      shelf.position.set(x, 3.6, -10);
+      shelf.castShadow = true;
+      shelf.receiveShadow = true;
+      scene.add(shelf);
+      levelMap.push(shelf);
+    }
+
+    // Table on 1st Floor (brightly lit) where the flashlight is placed
+    const tableGeo = new THREE.BoxGeometry(1.5, 0.8, 1.0);
+    const tableMat = new THREE.MeshStandardMaterial({ color: 0x4e342e, roughness: 0.7 });
+    const table = new THREE.Mesh(tableGeo, tableMat);
+    table.position.set(0, 0.4, 4);
+    table.castShadow = true;
+    table.receiveShadow = true;
+    scene.add(table);
+    levelMap.push(table);
+
+    // Flashlight Item (on table)
     const flashlightGeo = new THREE.CylinderGeometry(0.04, 0.04, 0.25, 8);
-    const flashlightMat = new THREE.MeshStandardMaterial({ color: 0x333333, metalness: 0.8 });
+    const flashlightMat = new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.8 });
     const flashlightMesh = new THREE.Mesh(flashlightGeo, flashlightMat);
-    flashlightMesh.position.set(-1, 0.125, 0.5);
+    flashlightMesh.position.set(0, 0.85, 4);
+    flashlightMesh.rotation.x = Math.PI / 2;
     scene.add(flashlightMesh);
     interactiveObjects.push({
       type: 'item',
@@ -819,10 +1031,10 @@ function buildLevel(level) {
       itemId: 'flashlight',
       icon: 'fa-flashlight',
       mesh: flashlightMesh,
-      radius: 0.4
+      radius: 0.45
     });
 
-    // Exit Door
+    // Exit Door (1st Floor)
     const doorGeo = new THREE.BoxGeometry(1.2, 2.2, 0.15);
     const doorMat = new THREE.MeshStandardMaterial({ color: 0x5e2c04 });
     const doorMesh = new THREE.Mesh(doorGeo, doorMat);
@@ -835,11 +1047,11 @@ function buildLevel(level) {
       radius: 1.5
     });
 
-    // Key Item
+    // Key Item (on the 2nd Floor mezzanine in dark)
     const keyGeo = new THREE.BoxGeometry(0.05, 0.02, 0.12);
     const keyMat = new THREE.MeshStandardMaterial({ color: 0xffd700 });
     const keyMesh = new THREE.Mesh(keyGeo, keyMat);
-    keyMesh.position.set(8, 0.1, -8);
+    keyMesh.position.set(4, 2.65, -10);
     scene.add(keyMesh);
     interactiveObjects.push({
       type: 'item',
@@ -847,7 +1059,7 @@ function buildLevel(level) {
       itemId: 'door_key',
       icon: 'fa-key',
       mesh: keyMesh,
-      radius: 0.4
+      radius: 0.5
     });
 
   } else if (level === 2) {
@@ -968,6 +1180,12 @@ function setupInputListeners() {
   inputsBound = true;
 
   window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      if (gameActive) {
+        togglePause();
+      }
+      return;
+    }
     const key = e.key.toLowerCase();
     if (key === 'w') keys.w = true;
     if (key === 'a') keys.a = true;
@@ -1110,7 +1328,7 @@ function performInteraction() {
 let clock = new THREE.Clock();
 
 function gameLoop() {
-  if (!gameActive) return;
+  if (!gameActive || gamePaused) return;
   animationFrameId = requestAnimationFrame(gameLoop);
 
   const delta = clock.getDelta();
@@ -1489,10 +1707,13 @@ window.restartLevel = () => {
 window.exitToMenu = () => {
   if (animationFrameId) cancelAnimationFrame(animationFrameId);
   gameActive = false;
+  gamePaused = false;
   clearInterval(timerInterval);
   document.getElementById('gameOverOverlay').style.display = 'none';
   document.getElementById('victoryOverlay').style.display = 'none';
+  document.getElementById('pauseOverlay').style.display = 'none';
   document.getElementById('mainMenuOverlay').style.display = 'flex';
+  updateMenuPreview();
 };
 
 window.nextLevelPart = () => {
@@ -1562,4 +1783,201 @@ window.unlockAllLevels = () => {
   showNotification("Всички нива са достъпни!");
   document.getElementById('level2Prog').textContent = "Част 1/10";
   document.getElementById('level3Prog').textContent = "Част 1/10";
+};
+
+// -------------------------------------------------------------
+// Pause Menu Implementation
+// -------------------------------------------------------------
+window.togglePause = () => {
+  if (!gameActive) return;
+  gamePaused = !gamePaused;
+  
+  if (gamePaused) {
+    document.exitPointerLock();
+    clearInterval(timerInterval);
+    document.getElementById('pauseOverlay').style.display = 'flex';
+  } else {
+    document.getElementById('pauseOverlay').style.display = 'none';
+    const canvas = document.getElementById('gameCanvas');
+    if (canvas) canvas.requestPointerLock();
+    
+    clock.getDelta(); // Reset clock delta
+    gameLoop();
+    
+    clearInterval(timerInterval);
+    timerInterval = setInterval(() => {
+      gameTime += 0.1;
+    }, 100);
+  }
+  playSound('click');
+};
+
+window.resumeGame = () => {
+  gamePaused = false;
+  document.getElementById('pauseOverlay').style.display = 'none';
+  const canvas = document.getElementById('gameCanvas');
+  if (canvas) canvas.requestPointerLock();
+  
+  clock.getDelta();
+  gameLoop();
+  
+  clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    gameTime += 0.1;
+  }, 100);
+};
+
+// -------------------------------------------------------------
+// Character Creator & Closet Settings
+// -------------------------------------------------------------
+let creatorPreviewScene, creatorPreviewCamera, creatorPreviewRenderer, creatorPreviewMesh;
+let creatorShirtColor = '#4caf50';
+let creatorPantsColor = '#1d3557';
+
+function initCreatorPreviewScene() {
+  const container = document.getElementById('creatorPreviewContainer');
+  if (!container || creatorPreviewRenderer) return;
+
+  creatorPreviewScene = new THREE.Scene();
+  creatorPreviewCamera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 10);
+  creatorPreviewCamera.position.set(0, 0.8, 2.2);
+  creatorPreviewCamera.lookAt(0, 0.4, 0);
+
+  creatorPreviewRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  creatorPreviewRenderer.setSize(container.clientWidth, container.clientHeight);
+  creatorPreviewRenderer.setPixelRatio(window.devicePixelRatio);
+  container.appendChild(creatorPreviewRenderer.domElement);
+
+  const light = new THREE.AmbientLight(0xffffff, 0.8);
+  creatorPreviewScene.add(light);
+  const dirLight = new THREE.DirectionalLight(0xffffff, 0.5);
+  dirLight.position.set(2, 3, 1);
+  creatorPreviewScene.add(dirLight);
+
+  creatorPreviewMesh = createCharacterModel(creatorShirtColor, 'none', creatorPantsColor, 'brown_short');
+  creatorPreviewScene.add(creatorPreviewMesh);
+
+  function animateCreatorPreview() {
+    requestAnimationFrame(animateCreatorPreview);
+    if (creatorPreviewMesh) {
+      creatorPreviewMesh.rotation.y += 0.015;
+    }
+    creatorPreviewRenderer.render(creatorPreviewScene, creatorPreviewCamera);
+  }
+  animateCreatorPreview();
+
+  // Drag interaction
+  let isDragging = false;
+  let prevMouseX = 0;
+  container.addEventListener('mousedown', (e) => {
+    isDragging = true;
+    prevMouseX = e.clientX;
+  });
+  window.addEventListener('mouseup', () => isDragging = false);
+  container.addEventListener('mousemove', (e) => {
+    if (isDragging && creatorPreviewMesh) {
+      const deltaX = e.clientX - prevMouseX;
+      creatorPreviewMesh.rotation.y += deltaX * 0.01;
+      prevMouseX = e.clientX;
+    }
+  });
+}
+
+window.updateCreatorModel = () => {
+  if (creatorPreviewMesh) {
+    creatorPreviewScene.remove(creatorPreviewMesh);
+  }
+  const hair = document.getElementById('creatorHair').value;
+  creatorPreviewMesh = createCharacterModel(creatorShirtColor, 'none', creatorPantsColor, hair);
+  creatorPreviewScene.add(creatorPreviewMesh);
+};
+
+window.setCreatorShirt = (color, btn) => {
+  creatorShirtColor = color;
+  document.querySelectorAll('#characterCreatorOverlay .creator-color-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  updateCreatorModel();
+  playSound('click');
+};
+
+window.setCreatorPants = (color, btn) => {
+  creatorPantsColor = color;
+  document.querySelectorAll('#characterCreatorOverlay .creator-pants-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  updateCreatorModel();
+  playSound('click');
+};
+
+window.saveInitialCharacter = async () => {
+  const shirt = creatorShirtColor;
+  const pants = creatorPantsColor;
+  const hair = document.getElementById('creatorHair').value;
+
+  const style = { shirtColor: shirt, pantsColor: pants, hairStyle: hair };
+  
+  try {
+    await db.collection('users').doc(currentUser.uid).update({
+      characterStyle: style,
+      equippedSkin: 'default'
+    });
+    playerCustomStyle = style;
+    document.getElementById('characterCreatorOverlay').style.display = 'none';
+    showNotification("Героят беше създаден успешно!", "success");
+    playSound('win');
+    updateMenuPreview();
+  } catch (err) {
+    console.error(err);
+  }
+};
+
+// Dressing Room / Съблекалня
+let closetShirtColor = '#4caf50';
+let closetPantsColor = '#1d3557';
+
+window.setClosetShirt = (color, btn) => {
+  closetShirtColor = color;
+  document.querySelectorAll('#closet-tab .creator-color-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  updateClosetModel();
+  playSound('click');
+};
+
+window.setClosetPants = (color, btn) => {
+  closetPantsColor = color;
+  document.querySelectorAll('#closet-tab .creator-pants-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  updateClosetModel();
+  playSound('click');
+};
+
+window.updateClosetModel = () => {
+  const hair = document.getElementById('closetHair').value;
+  if (previewMesh) {
+    previewScene.remove(previewMesh);
+  }
+  previewMesh = createCharacterModel(closetShirtColor, 'none', closetPantsColor, hair);
+  previewScene.add(previewMesh);
+};
+
+window.saveClosetSelection = async () => {
+  const shirt = closetShirtColor;
+  const pants = closetPantsColor;
+  const hair = document.getElementById('closetHair').value;
+
+  const style = { shirtColor: shirt, pantsColor: pants, hairStyle: hair };
+  
+  try {
+    await db.collection('users').doc(currentUser.uid).update({
+      characterStyle: style,
+      equippedSkin: 'default'
+    });
+    player.activeSkin = 'default';
+    playerCustomStyle = style;
+    showNotification("Стилът на героя беше обновен!");
+    playSound('win');
+    updateMenuPreview();
+    renderShopGrid();
+  } catch (err) {
+    console.error(err);
+  }
 };

@@ -430,6 +430,13 @@
       9% { transform: translate(2px, 2px) rotate(0deg); }
       100% { transform: translate(1px, -2px) rotate(-1deg); }
     }
+
+    .creator-color-btn, .creator-pants-btn {
+      width: 35px; height: 35px; border-radius: 50%; border: 3px solid transparent; cursor: pointer;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.2); transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+    .creator-color-btn:hover, .creator-pants-btn:hover { transform: scale(1.1); }
+    .creator-color-btn.active, .creator-pants-btn.active { border-color: white; transform: scale(1.15); }
   </style>
 </head>
 <body>
@@ -514,6 +521,7 @@
             <div class="menu-btn-group">
               <button class="menu-nav-btn active" data-tab="play-tab"><i class="fas fa-play"></i> Играй</button>
               <button class="menu-nav-btn" data-tab="shop-tab"><i class="fas fa-shopping-cart"></i> Магазин</button>
+              <button class="menu-nav-btn" data-tab="closet-tab"><i class="fas fa-tshirt"></i> Съблекалня</button>
               <button class="menu-nav-btn" data-tab="quests-tab"><i class="fas fa-tasks"></i> Мисии</button>
               <button class="menu-nav-btn" data-tab="leaderboard-tab"><i class="fas fa-trophy"></i> Класация</button>
               <button class="menu-nav-btn" id="devConsoleLink" style="display:none;" data-tab="dev-tab"><i class="fas fa-tools"></i> Дев Панел</button>
@@ -599,6 +607,42 @@
               <button class="btn btn-gold" onclick="unlockAllLevels()"><i class="fas fa-unlock"></i> Отключи всички нива</button>
             </div>
           </div>
+
+          <!-- Closet Panel -->
+          <div id="closet-tab" class="menu-panel">
+            <h2>Dressing Room / Съблекалня</h2>
+            <p style="color: #a1a1aa; font-size: 0.85rem; margin-bottom: 1.5rem;">Персонализирайте облеклото и външния вид на вашия собствен 3D герой.</p>
+            <div style="display:flex; flex-direction:column; gap:1.2rem; max-width:400px;">
+              <div class="form-group">
+                <label>Цвят на тениската</label>
+                <div style="display:flex; gap:0.5rem; margin-top:0.25rem;">
+                  <button class="creator-color-btn active" style="background:#4caf50;" onclick="setClosetShirt('#4caf50', this)"></button>
+                  <button class="creator-color-btn" style="background:#2196f3;" onclick="setClosetShirt('#2196f3', this)"></button>
+                  <button class="creator-color-btn" style="background:#ef5350;" onclick="setClosetShirt('#ef5350', this)"></button>
+                  <button class="creator-color-btn" style="background:#9c27b0;" onclick="setClosetShirt('#9c27b0', this)"></button>
+                  <button class="creator-color-btn" style="background:#ffeb3b;" onclick="setClosetShirt('#ffeb3b', this)"></button>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Цвят на панталона</label>
+                <div style="display:flex; gap:0.5rem; margin-top:0.25rem;">
+                  <button class="creator-pants-btn active" style="background:#1d3557;" onclick="setClosetPants('#1d3557', this)"></button>
+                  <button class="creator-pants-btn" style="background:#3f3f46;" onclick="setClosetPants('#3f3f46', this)"></button>
+                  <button class="creator-pants-btn" style="background:#d4a373;" onclick="setClosetPants('#d4a373', this)"></button>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Прическа на героя</label>
+                <select id="closetHair" onchange="updateClosetModel()" style="padding:0.6rem 0.8rem; background:#1e1e2f; border:1px solid rgba(255,255,255,0.05); border-radius:8px; color:white; font-size:0.88rem;">
+                  <option value="brown_short">Къса кафява коса</option>
+                  <option value="black_spiky">Черна бодлива коса</option>
+                  <option value="blonde_long">Дълга руса коса</option>
+                  <option value="bald">Гологлав</option>
+                </select>
+              </div>
+              <button class="btn btn-primary" onclick="saveClosetSelection()" style="margin-top:1rem; padding: 1rem;"><i class="fas fa-check-circle"></i> ЗАПАЗИ ИЗБОРА</button>
+            </div>
+          </div>
         </main>
 
         <!-- Preview Column Right -->
@@ -670,6 +714,67 @@
           <button class="btn btn-secondary" onclick="closeAdminShopModal()">Отказ</button>
           <button class="btn btn-primary" onclick="saveAdminShopItem()">Запази</button>
         </div>
+      </div>
+    </div>
+
+    <!-- Pause Menu Overlay -->
+    <div id="pauseOverlay" class="screen-overlay" style="display: none; background: rgba(5, 5, 8, 0.8);">
+      <div style="background: rgba(15, 23, 42, 0.7); border: 1.5px solid var(--border-glow); padding: 2.5rem; border-radius: 24px; text-align: center; max-width: 340px; width: 90%; box-shadow: 0 20px 50px rgba(0,0,0,0.6);">
+        <h2 style="color: var(--primary); margin-bottom: 1.5rem; font-size: 2rem;"><i class="fas fa-pause"></i> Пауза</h2>
+        <p style="font-size: 0.88rem; color:#a1a1aa; margin-bottom: 1.5rem;">Играта е на пауза.</p>
+        <div style="display: flex; flex-direction: column; gap: 0.8rem;">
+          <button class="btn btn-primary" onclick="resumeGame()" style="padding: 0.8rem;"><i class="fas fa-play"></i> Продължи</button>
+          <button class="btn btn-secondary" onclick="exitToMenu()" style="padding: 0.8rem;"><i class="fas fa-home"></i> Изход към меню</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Initial Character Creator Overlay -->
+    <div id="characterCreatorOverlay" class="screen-overlay" style="display: none; background: rgba(5, 5, 8, 0.95);">
+      <div class="screen-container" style="grid-template-columns: 1fr 340px; height: 75%; max-width: 900px;">
+        <div class="menu-content">
+          <h2 style="color: var(--primary);"><i class="fas fa-paint-brush"></i> Създай своя герой</h2>
+          <p style="color:#a1a1aa; font-size:0.85rem; margin-bottom:1.5rem;">Изберете външния вид на своя герой за първата си игра. По-късно можете да сменяте цветовете свободно от Съблекалнята.</p>
+          
+          <div class="form-group" style="margin-bottom: 1.2rem;">
+            <label>Цвят на тениската</label>
+            <div style="display:flex; gap:0.5rem; margin-top:0.4rem;">
+              <button class="creator-color-btn active" style="background:#4caf50;" onclick="setCreatorShirt('#4caf50', this)"></button>
+              <button class="creator-color-btn" style="background:#2196f3;" onclick="setCreatorShirt('#2196f3', this)"></button>
+              <button class="creator-color-btn" style="background:#ef5350;" onclick="setCreatorShirt('#ef5350', this)"></button>
+              <button class="creator-color-btn" style="background:#9c27b0;" onclick="setCreatorShirt('#9c27b0', this)"></button>
+              <button class="creator-color-btn" style="background:#ffeb3b;" onclick="setCreatorShirt('#ffeb3b', this)"></button>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 1.2rem;">
+            <label>Цвят на панталона</label>
+            <div style="display:flex; gap:0.5rem; margin-top:0.4rem;">
+              <button class="creator-pants-btn active" style="background:#1d3557;" onclick="setCreatorPants('#1d3557', this)"></button>
+              <button class="creator-pants-btn" style="background:#3f3f46;" onclick="setCreatorPants('#3f3f46', this)"></button>
+              <button class="creator-pants-btn" style="background:#d4a373;" onclick="setCreatorPants('#d4a373', this)"></button>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 1rem;">
+            <label>Избор на прическа</label>
+            <select id="creatorHair" onchange="updateCreatorModel()" style="margin-top:0.4rem; padding:0.6rem 0.8rem; background:#1e1e2f; border:1px solid rgba(255,255,255,0.05); border-radius:8px; color:white; font-size:0.88rem; width:100%; max-width:280px;">
+              <option value="brown_short">Къса кафява коса</option>
+              <option value="black_spiky">Черна бодлива коса</option>
+              <option value="blonde_long">Дълга руса коса</option>
+              <option value="bald">Гологлав</option>
+            </select>
+          </div>
+        </div>
+
+        <aside class="menu-preview-panel">
+          <div>
+            <h3>Преглед</h3>
+            <p style="font-size:0.72rem; color:#a1a1aa; margin-bottom: 0.5rem;">Завърти героя с мишката</p>
+            <div id="creatorPreviewContainer" style="width: 100%; height: 250px; background: rgba(0,0,0,0.25); border-radius:16px; border:1px solid var(--border-glow); overflow:hidden;"></div>
+          </div>
+          <button class="btn btn-primary" onclick="saveInitialCharacter()" style="width:100%; padding:1rem; font-weight:700;"><i class="fas fa-save"></i> ЗАПАЗИ И ПРОДЪЛЖИ</button>
+        </aside>
       </div>
     </div>
   </div>
