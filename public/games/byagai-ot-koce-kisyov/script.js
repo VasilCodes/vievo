@@ -1034,7 +1034,7 @@ function initEngine() {
 }
 
 function resetPositions() {
-  player.position.set(0, player.height, 11);
+  player.position.set(-13, player.height, 13);
   player.rotation.set(0, 0);
   if (camera) {
     camera.rotation.order = "YXZ";
@@ -2254,7 +2254,7 @@ function updateKoceAI(delta) {
       playSound('alert');
       triggerHeartThump();
       // Нулиране на позицията на играча
-      player.position.set(0, player.height, 11);
+      player.position.set(-13, player.height, 13);
       if (camera) {
         camera.position.copy(player.position);
         camera.rotation.order = "YXZ";
