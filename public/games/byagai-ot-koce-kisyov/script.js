@@ -25,7 +25,9 @@ const player = {
   isCrawling: false,
   velocity: new THREE.Vector3(0, 0, 0),
   isGrounded: true,
-  jumpStrength: 5.2
+  jumpStrength: 5.2,
+  maxHearts: 3,
+  hearts: 3
 };
 
 // Key controls
@@ -70,6 +72,7 @@ let dailyQuests = [];
 let previewScene, previewCamera, previewRenderer, previewMesh;
 let playerCustomStyle = { shirtColor: '#4caf50', pantsColor: '#1d3557', hairStyle: 'brown_short' };
 let gamePaused = false;
+let hoveredObject = null;
 
 // Sound Synth (Web Audio API)
 let audioCtx = null;
@@ -201,6 +204,9 @@ auth.onAuthStateChanged(async (user) => {
         }
 
         player.activeSkin = d.equippedSkin || 'default';
+        player.maxHearts = d.upgrades?.hearts || 3;
+        player.hearts = player.maxHearts;
+        updateHeartsHUD();
         
         // Check if admin / owner to display dev panel and admin add offer buttons
         const isAdmin = d.role === 'admin' || d.role === 'owner';
@@ -867,6 +873,7 @@ function resetPositions() {
   player.stamina = 100;
   player.flashlightBattery = 100;
   player.flashlight = false;
+  player.hearts = player.maxHearts;
   player.inventory = [{ id: 'hand', name: 'Ръце', icon: 'fa-hand-paper' }];
   player.activeSlot = 1;
   player.hiding = false;
@@ -1090,16 +1097,10 @@ function buildLevel(level) {
 
     // Лабиринт от детайлни секции с книги на първия етаж
     const mazePositions = [
-      { x: -10, z: 10 },
-      { x: -10, z: 0 },
-      { x: -10, z: -10 },
-      { x: -5, z: 5 },
-      { x: -5, z: -5 },
-      { x: 5, z: 10 },
-      { x: 5, z: -5 },
-      { x: 5, z: -10 },
-      { x: 10, z: 5 },
-      { x: 10, z: -5 }
+      { x: -10, z: 12 }, { x: -10, z: 6 }, { x: -10, z: 0 }, { x: -10, z: -6 }, { x: -10, z: -12 },
+      { x: -5, z: 9 }, { x: -5, z: 3 }, { x: -5, z: -3 }, { x: -5, z: -9 },
+      { x: 5, z: 9 }, { x: 5, z: 3 }, { x: 5, z: -3 }, { x: 5, z: -9 },
+      { x: 10, z: 12 }, { x: 10, z: 6 }, { x: 10, z: 0 }, { x: 10, z: -6 }, { x: 10, z: -12 }
     ];
     mazePositions.forEach(pos => {
       createDetailedBookshelf(pos.x, 1.0, pos.z);
@@ -1446,15 +1447,19 @@ function performInteraction() {
   }
 
   // Find nearest interactive
-  let nearest = null;
-  let minDist = Infinity;
-  interactiveObjects.forEach(obj => {
-    const dist = player.position.distanceTo(obj.mesh.position);
-    if (dist < obj.radius && dist < minDist) {
-      minDist = dist;
-      nearest = obj;
-    }
-  });
+  let nearest = hoveredObject;
+  if (!nearest) {
+    let minDist = Infinity;
+    interactiveObjects.forEach(obj => {
+      const pPos = new THREE.Vector3(player.position.x, 0, player.position.z);
+      const oPos = new THREE.Vector3(obj.mesh.position.x, 0, obj.mesh.position.z);
+      const dist = pPos.distanceTo(oPos);
+      if (dist < (obj.radius + 1.2) && dist < minDist) {
+        minDist = dist;
+        nearest = obj;
+      }
+    });
+  }
 
   if (nearest) {
     if (nearest.type === 'item') {
@@ -1522,6 +1527,7 @@ function updateInteractionPrompt() {
     });
 
     if (targetObj) {
+      hoveredObject = targetObj;
       if (crosshair) crosshair.classList.add('interactable');
       promptEl.classList.add('active');
       
@@ -1540,6 +1546,7 @@ function updateInteractionPrompt() {
     }
   }
 
+  hoveredObject = null;
   if (crosshair) crosshair.classList.remove('interactable');
   promptEl.classList.remove('active');
 }
@@ -1654,7 +1661,7 @@ function handlePlayerMovement(delta) {
   } else {
     // Grounded height checks
     let expectedY = player.height;
-    if (player.position.x >= -8 && player.position.x <= 8 && player.position.z >= -15 && player.position.z <= 1) {
+    if (player.position.y > 2.0 && player.position.x >= -8 && player.position.x <= 8 && player.position.z >= -15 && player.position.z <= 1) {
       expectedY = 2.5 + player.height;
     }
     
@@ -1795,7 +1802,31 @@ function updateKoceAI(delta) {
 
   // Game over check
   if (distToPlayer < 0.95 && !player.hiding) {
-    triggerGameOver();
+    player.hearts--;
+    updateHeartsHUD();
+    
+    if (player.hearts <= 0) {
+      triggerGameOver();
+    } else {
+      showNotification(`Коце те хвана! Остават ти ${player.hearts} 💔`, 'warn');
+      playSound('alert');
+      // Нулиране на позицията на играча
+      player.position.set(2, player.height, 2);
+      if (camera) {
+        camera.position.copy(player.position);
+        camera.rotation.order = "YXZ";
+        camera.rotation.y = 0;
+        camera.rotation.x = 0;
+      }
+      player.velocity.set(0, 0, 0);
+      player.isGrounded = true;
+      player.rotation.set(0, 0);
+      
+      // Нулиране на позицията на Коце
+      koce.position.set(15, 0, 15);
+      koce.state = 'patrol';
+      koce.patrolTarget.copy(getRandomPatrolNode());
+    }
   }
 }
 
@@ -1845,6 +1876,36 @@ function updateHUD() {
   const flashlightIcon = document.getElementById('slotFlashlightIcon');
   if (player.inventory.some(i => i.id === 'flashlight')) {
     if (flashlightIcon) flashlightIcon.style.display = 'block';
+  }
+
+  // Покажи батерията само когато държим фенера в ръка
+  const activeItem = player.inventory[player.activeSlot - 1];
+  const batteryBarGroup = document.getElementById('batteryBarGroup');
+  if (batteryBarGroup) {
+    if (activeItem && activeItem.id === 'flashlight') {
+      batteryBarGroup.style.display = 'flex';
+    } else {
+      batteryBarGroup.style.display = 'none';
+    }
+  }
+
+  updateHeartsHUD();
+}
+
+function updateHeartsHUD() {
+  const container = document.getElementById('heartsContainer');
+  if (!container) return;
+  container.innerHTML = '';
+  for (let i = 0; i < player.maxHearts; i++) {
+    const heart = document.createElement('i');
+    if (i < player.hearts) {
+      heart.className = 'fas fa-heart';
+      heart.style.color = '#e63946';
+    } else {
+      heart.className = 'far fa-heart';
+      heart.style.color = 'rgba(255, 255, 255, 0.2)';
+    }
+    container.appendChild(heart);
   }
 }
 

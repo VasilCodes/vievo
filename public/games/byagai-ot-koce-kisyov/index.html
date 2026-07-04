@@ -448,13 +448,16 @@
     <div id="hud">
       <div class="hud-top">
         <div class="hud-stats-group">
+          <div class="hud-stat-bar" id="heartsContainer" style="gap: 0.3rem; margin-bottom: 0.25rem;">
+            <!-- Сърцата се рендират динамично от JS -->
+          </div>
           <div class="hud-stat-bar">
             <i class="fas fa-running" style="color: #4caf50;"></i>
             <div class="bar-outer">
               <div id="staminaBar" class="bar-inner" style="width: 100%;"></div>
             </div>
           </div>
-          <div class="hud-stat-bar">
+          <div class="hud-stat-bar" id="batteryBarGroup" style="display: none;">
             <i class="fas fa-battery-three-quarters" id="flashlightIcon" style="color: #2196f3;"></i>
             <div class="bar-outer">
               <div id="batteryBar" class="bar-inner" style="width: 100%;"></div>
