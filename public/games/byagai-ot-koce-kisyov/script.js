@@ -166,10 +166,10 @@ async function rewardXPAndCredits(xpAmount, creditsAmount, reason) {
     currentUserData.level = updates.level;
 
     if (creditsAmount > 0) {
-      showNotification(`Получи +${creditsAmount} 💰 и +${xpAmount} XP (${reason})`, 'success');
+      showNotification(`Получи +${creditsAmount} <i class="fas fa-coins"></i> и +${xpAmount} XP (${reason})`, 'success');
     }
     if (leveledUp) {
-      showNotification(`🎉 Честито! Достигна ниво ${newLevel} и получи бонус от ${newLevel * 50} 💰!`, 'success');
+      showNotification(`<i class="fas fa-crown"></i> Честито! Достигна ниво ${newLevel} и получи бонус от ${newLevel * 50} <i class="fas fa-coins"></i>!`, 'success');
     }
   } catch (err) {
     console.error('Грешка при актуализиране на XP/Кредити:', err);
@@ -193,7 +193,8 @@ auth.onAuthStateChanged(async (user) => {
         
         // Зареждане на къстъмизирания скин на играча
         if (!d.characterStyle) {
-          document.getElementById('characterCreatorOverlay').style.display = 'flex';
+          const creatorOverlay = document.getElementById('characterCreatorOverlay');
+          if (creatorOverlay) creatorOverlay.style.display = 'flex';
           initCreatorPreviewScene();
         } else {
           playerCustomStyle = d.characterStyle;
@@ -897,7 +898,7 @@ function resetPositions() {
   player.flashlightBattery = 100;
   player.flashlight = false;
   player.hearts = player.maxHearts;
-  player.inventory = [{ id: 'hand', name: 'Ръце', icon: 'fa-hand-paper' }];
+  player.inventory = [{ id: 'hand', name: 'Ръце', icon: 'fa-hand' }];
   player.activeSlot = 1;
   player.hiding = false;
   player.currentLocker = null;
@@ -993,6 +994,9 @@ function buildLevel(level) {
   levelMap = [];
   interactiveObjects.forEach(obj => scene.remove(obj.mesh));
   interactiveObjects = [];
+  visitedZones = new Set();
+  zonePopupQueue = [];
+  zonePopupActive = false;
 
   const wallMat = new THREE.MeshStandardMaterial({ color: 0x3e3e4a, roughness: 0.8 });
   const floorMat = new THREE.MeshStandardMaterial({ color: 0x5c4033, roughness: 0.6 }); // warm wooden floor
@@ -1062,7 +1066,7 @@ function buildLevel(level) {
     balcony.position.set(0, 2.5, -7);
     balcony.receiveShadow = true;
     scene.add(balcony);
-    levelMap.push(balcony);
+    // НЕ добавяме балкона в levelMap, защото блокира движението на играча върху него
 
     // Парапет (fence) на втория етаж
     const fenceGroup = new THREE.Group();
@@ -1080,11 +1084,11 @@ function buildLevel(level) {
     }
     scene.add(fenceGroup);
 
-    // Стълби до втория етаж
+    // Стълби до втория етаж (от земята до ръба на балкона z=1)
     for (let i = 0; i < 11; i++) {
       const stepGeo = new THREE.BoxGeometry(2.5, 0.23, 0.45);
       const step = new THREE.Mesh(stepGeo, balconyMat);
-      step.position.set(-5, 0.115 + i * 0.23, -1 + i * 0.45);
+      step.position.set(-5, 0.115 + i * 0.23, -3.5 + i * 0.45);
       step.receiveShadow = true;
       step.castShadow = true;
       scene.add(step);
@@ -1093,8 +1097,8 @@ function buildLevel(level) {
 
     // Диагонален парапет за стълбите
     const stairsRailing = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 5.5), balconyMat);
-    stairsRailing.position.set(-3.7, 1.8, 1.0);
-    stairsRailing.rotation.x = 0.52;
+    stairsRailing.position.set(-3.7, 1.8, -2.0);
+    stairsRailing.rotation.x = 0.6;
     scene.add(stairsRailing);
 
     // Точково локално осветление за първия етаж
@@ -1275,6 +1279,13 @@ function buildLevel(level) {
       });
     }
 
+    // Рафтове по десната стена на коридора
+    createDetailedBookshelf(14, 1.0, -8);
+    createDetailedBookshelf(14, 1.0, 0);
+    createDetailedBookshelf(14, 1.0, 8);
+    // Малък рафт до баракадата
+    createDetailedBookshelf(1, 1.0, 5);
+
     // Barricade blocking path
     const deskGeo = new THREE.BoxGeometry(3, 1.2, 1.5);
     const desk = new THREE.Mesh(deskGeo, wallMat);
@@ -1337,7 +1348,15 @@ function buildLevel(level) {
       radius: 1.5
     });
 
-    // Color key
+    // Рафтове в столовата (ъгли и по стените)
+    createDetailedBookshelf(-12, 1.0, -10);
+    createDetailedBookshelf(-12, 1.0, 10);
+    createDetailedBookshelf(12, 1.0, -10);
+    createDetailedBookshelf(12, 1.0, 10);
+    createDetailedBookshelf(-3, 1.0, -12);
+    createDetailedBookshelf(3, 1.0, -12);
+
+    // Color key (преместен под един от рафтовете)
     const keyMesh = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.02, 0.12), new THREE.MeshStandardMaterial({ color: 0x8b5cf6 }));
     keyMesh.position.set(8, 0.1, 8);
     scene.add(keyMesh);
@@ -1617,6 +1636,7 @@ function gameLoop() {
   updateNoiseHUD();
   updateFlashlightBattery(delta);
   updateInteractionPrompt();
+  updateZoneTriggers(delta);
 
   renderer.render(scene, camera);
 }
@@ -1719,10 +1739,10 @@ function handlePlayerMovement(delta) {
       expectedY = 2.5 + player.height;
     }
     
-    // Smooth step climbing on stairs: x = -5, z = -1 to 4.5
-    if (player.position.x >= -6.5 && player.position.x <= -3.5 && player.position.z >= -1.5 && player.position.z <= 4.5) {
-      const t = (4.5 - player.position.z) / 5.5; // 0 to 1
-      const stairHeight = Math.max(0, Math.min(2.53, t * 2.53));
+    // Smooth step climbing on stairs: x = -5, z = -3.5 to 1
+    if (player.position.x >= -6.5 && player.position.x <= -3.5 && player.position.z >= -4.0 && player.position.z <= 1.5) {
+      const t = Math.max(0, Math.min(1, (player.position.z + 3.5) / 4.5));
+      const stairHeight = 0.115 + t * 2.3;
       expectedY = stairHeight + player.height;
     }
 
@@ -1750,23 +1770,6 @@ function handlePlayerMovement(delta) {
 
   // Update HUD values
   document.getElementById('staminaBar').style.width = player.stamina + '%';
-
-  // Interaction prompt detection
-  let canInteract = false;
-  interactiveObjects.forEach(obj => {
-    if (player.position.distanceTo(obj.mesh.position) < obj.radius) {
-      canInteract = true;
-    }
-  });
-  const cross = document.getElementById('crosshair');
-  const prompt = document.getElementById('interactionPrompt');
-  if (canInteract) {
-    cross.classList.add('interactable');
-    prompt.classList.add('active');
-  } else {
-    cross.classList.remove('interactable');
-    prompt.classList.remove('active');
-  }
 }
 
 function updateKoceAI(delta) {
@@ -1864,7 +1867,7 @@ function updateKoceAI(delta) {
     if (player.hearts <= 0) {
       triggerGameOver();
     } else {
-      showNotification(`Коце те хвана! Остават ти ${player.hearts} 💔`, 'warn');
+      showNotification(`Коце те хвана! Остават ти ${player.hearts} <i class="fas fa-heart-broken"></i>`, 'warn');
       playSound('alert');
       // Нулиране на позицията на играча
       player.position.set(2, player.height, 2);
@@ -1993,6 +1996,102 @@ function showNotification(message, type = 'success') {
   }, 2500);
 }
 
+// -------------------------------------------------------------
+// Dynamic Zone Popups System
+// -------------------------------------------------------------
+let zonePopupQueue = [];
+let zonePopupActive = false;
+let visitedZones = new Set();
+
+function showDynamicPopup(title, message, icon = 'fa-info-circle', duration = 4000) {
+  const el = document.getElementById('dynamicPopup');
+  if (!el) return;
+  
+  el.querySelector('.popup-icon i').className = `fas ${icon}`;
+  el.querySelector('.popup-title').textContent = title;
+  el.querySelector('.popup-message').textContent = message;
+  el.classList.add('active');
+  el.classList.remove('hide');
+  
+  clearTimeout(el._timeout);
+  el._timeout = setTimeout(() => {
+    el.classList.add('hide');
+    setTimeout(() => {
+      el.classList.remove('active');
+      zonePopupActive = false;
+      processZoneQueue();
+    }, 400);
+  }, duration);
+  
+  zonePopupActive = true;
+}
+
+function processZoneQueue() {
+  if (zonePopupActive || zonePopupQueue.length === 0) return;
+  const next = zonePopupQueue.shift();
+  showDynamicPopup(next.title, next.message, next.icon, next.duration);
+}
+
+function checkZoneTrigger(zoneId, title, message, icon) {
+  if (visitedZones.has(zoneId)) return;
+  visitedZones.add(zoneId);
+  
+  zonePopupQueue.push({ title, message, icon, duration: 4000 });
+  if (!zonePopupActive) processZoneQueue();
+}
+
+let zoneCheckTimer = 0;
+function updateZoneTriggers(delta) {
+  zoneCheckTimer += delta;
+  if (zoneCheckTimer < 2.0) return; // Check every 2 seconds
+  zoneCheckTimer = 0;
+  
+  if (currentLevel === 1) {
+    // Балкон зона
+    if (player.position.y > 4.0 && player.position.x >= -8 && player.position.x <= 8 && player.position.z >= -15 && player.position.z <= 1) {
+      checkZoneTrigger('l1_balcony', 'Балкон — 2-ри етаж', 'Внимавай! Коце може да се качи по стълбите и да те открие. Търси ключа сред рафтовете!', 'fa-cloud-moon');
+    }
+    // Стълби зона
+    if (player.position.x >= -6.5 && player.position.x <= -3.5 && player.position.z >= -4.0 && player.position.z <= 1.5) {
+      checkZoneTrigger('l1_stairs', 'Стълби', 'Качваш се на втория етаж. Бъди тих — шумът привлича Коце!', 'fa-arrow-up');
+    }
+    // Ключова зона (близо до ключа)
+    if (player.position.distanceTo(new THREE.Vector3(4, 2.65, -10)) < 5) {
+      checkZoneTrigger('l1_key_area', 'Близо до ключа', 'Някъде тук има ключ за изходната врата. Огледай се внимателно!', 'fa-key');
+    }
+    // Фенерче зона
+    if (player.position.distanceTo(new THREE.Vector3(0, 0.85, 4)) < 5) {
+      checkZoneTrigger('l1_flashlight_area', 'Фенерче', 'Фенерчето е някъде тук на масата. Светлината ще ти помогне в тъмното!', 'fa-flashlight');
+    }
+  } else if (currentLevel === 2) {
+    // Начало на коридора
+    if (player.position.z > -2 && player.position.z < 2 && player.position.x < -10) {
+      checkZoneTrigger('l2_corridor', 'Училищен Коридор', 'Дълъг и тесен коридор. Скрий се в шкафчетата, ако Коце наближи!', 'fa-school');
+    }
+    // Баракада
+    if (player.position.distanceTo(new THREE.Vector3(4, 0.6, 2)) < 5) {
+      checkZoneTrigger('l2_barricade', 'Баракада', 'Проходът е блокиран. Потърси ключ в чекмеджето на бюрото!', 'fa-couch');
+    }
+    // Шкафчета
+    if (player.position.x < -12 && (player.position.z > 8 || player.position.z < -8)) {
+      checkZoneTrigger('l2_lockers', 'Шкафчета', 'Шкафчетата за преобличане са идеални за скриване. Натисни E, за да влезеш!', 'fa-archive');
+    }
+  } else if (currentLevel === 3) {
+    // Столова
+    if (player.position.z > -2 && player.position.z < 2 && player.position.x < 5 && player.position.x > -5) {
+      checkZoneTrigger('l3_cafeteria', 'Трапезария', 'Голяма столова с много маси. Използвай ги за прикритие от Коце!', 'fa-utensils');
+    }
+    // Кухня/Хладилник зона
+    if (player.position.x > 10 || player.position.x < -10) {
+      checkZoneTrigger('l3_kitchen', 'Кухненски бокс', 'Хладилната врата е изходът. Намери лилавия ключ за отключване!', 'fa-snowflake');
+    }
+    // Ключ зона
+    if (player.position.distanceTo(new THREE.Vector3(8, 0.1, 8)) < 5) {
+      checkZoneTrigger('l3_key', 'Хладилен ключ', 'Ключът трябва да е някъде по земята. Свети лилаво!', 'fa-key');
+    }
+  }
+}
+
 // Start Game from Main Menu
 document.getElementById('btnPlayGame').addEventListener('click', () => {
   initAudio();
@@ -2056,6 +2155,14 @@ function triggerVictory() {
   // Firebase submission and rewards
   rewardXPAndCredits(50, 25, 'Преминаване на ниво');
   submitLeaderboardRecord(Math.floor(gameTime * 1000));
+
+  // Auto-advance to next part after 8 seconds
+  setTimeout(() => {
+    const victoryOverlay = document.getElementById('victoryOverlay');
+    if (victoryOverlay && victoryOverlay.style.display === 'flex') {
+      nextLevelPart();
+    }
+  }, 8000);
 }
 
 // Defeat / caught triggering screen
