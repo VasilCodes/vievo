@@ -542,6 +542,77 @@
       line-height: 1.3;
     }
 
+    /* Mobile Touch Controls */
+    #touchControls {
+      position: absolute;
+      bottom: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 20;
+      pointer-events: none;
+      display: none;
+    }
+    #touchControls.active {
+      display: block;
+    }
+    .touch-joystick {
+      position: absolute;
+      bottom: 40px; left: 40px;
+      width: 130px; height: 130px;
+      background: rgba(255,255,255,0.08);
+      border: 2px solid rgba(255,255,255,0.15);
+      border-radius: 50%;
+      pointer-events: auto;
+      touch-action: none;
+    }
+    .touch-joystick-knob {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 50px; height: 50px;
+      background: rgba(239, 83, 80, 0.5);
+      border: 2px solid var(--primary);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+    .touch-btn-group {
+      position: absolute;
+      bottom: 40px; right: 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      pointer-events: none;
+    }
+    .touch-btn {
+      width: 60px; height: 60px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.1);
+      border: 2px solid rgba(255,255,255,0.2);
+      color: white;
+      font-size: 1.3rem;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      pointer-events: auto;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    .touch-btn:active {
+      background: rgba(239, 83, 80, 0.4);
+      border-color: var(--primary);
+    }
+    .touch-btn-lg {
+      width: 70px; height: 70px;
+      font-size: 1.5rem;
+    }
+    .touch-look-area {
+      position: absolute;
+      top: 0; right: 0;
+      width: 55%; height: 100%;
+      pointer-events: auto;
+      touch-action: none;
+    }
+
     /* General Forms & Modals */
     .modal-backdrop {
       position: absolute; top:0; left:0; width:100%; height:100%;
@@ -675,6 +746,20 @@
         <button class="btn btn-primary" onclick="unlockHintWithAd()"><i class="fas fa-video"></i> Безплатно (Реклама)</button>
       </div>
       <button class="btn btn-secondary" onclick="closeHintPopup()" style="margin-top: 0.5rem; padding: 0.3rem 0.8rem; font-size: 0.75rem;">Затвори</button>
+    </div>
+
+    <!-- Mobile Touch Controls -->
+    <div id="touchControls">
+      <div class="touch-joystick" id="touchJoystick">
+        <div class="touch-joystick-knob" id="touchJoystickKnob"></div>
+      </div>
+      <div class="touch-btn-group">
+        <button class="touch-btn touch-btn-lg" id="touchInteract"><i class="fas fa-hand"></i></button>
+        <button class="touch-btn" id="touchJump"><i class="fas fa-arrow-up"></i></button>
+        <button class="touch-btn" id="touchCrouch"><i class="fas fa-arrow-down"></i></button>
+        <button class="touch-btn" id="touchFlashlight"><i class="fas fa-flashlight"></i></button>
+      </div>
+      <div class="touch-look-area" id="touchLookArea"></div>
     </div>
 
     <!-- Dynamic Zone Popup -->

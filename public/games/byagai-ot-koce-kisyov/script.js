@@ -936,6 +936,7 @@ function initEngine() {
 
   resetPositions();
   setupInputListeners();
+  setupTouchControls();
 }
 
 function resetPositions() {
@@ -1246,50 +1247,33 @@ function buildLevel(level) {
       scene.add(light);
     });
 
-    // Лабиринт от детайлни секции с книги на първия етаж
+    // Лабиринт от детайлни секции с книги на първия етаж (сгъстен за сложен пъзел)
     const mazePositions = [
       { x: -10, z: 12 }, { x: -10, z: 6 }, { x: -10, z: 0 }, { x: -10, z: -6 }, { x: -10, z: -12 },
-      { x: -5, z: 9 }, { x: -5, z: 3 }, { x: -5, z: -3 }, { x: -5, z: -9 },
-      { x: 5, z: 9 }, { x: 5, z: 3 }, { x: 5, z: -3 }, { x: 5, z: -9 },
+      { x: -7, z: 9 }, { x: -7, z: 3 }, { x: -7, z: -3 }, { x: -7, z: -9 },
+      { x: -5, z: 12 }, { x: -5, z: 6 }, { x: -5, z: 0 }, { x: -5, z: -6 }, { x: -5, z: -12 },
+      { x: -3, z: 9 }, { x: -3, z: 3 }, { x: -3, z: -3 }, { x: -3, z: -9 },
+      { x: 0, z: 12 }, { x: 0, z: 6 }, { x: 0, z: 0 }, { x: 0, z: -6 }, { x: 0, z: -12 },
+      { x: 3, z: 9 }, { x: 3, z: 3 }, { x: 3, z: -3 }, { x: 3, z: -9 },
+      { x: 5, z: 12 }, { x: 5, z: 6 }, { x: 5, z: 0 }, { x: 5, z: -6 }, { x: 5, z: -12 },
+      { x: 7, z: 9 }, { x: 7, z: 3 }, { x: 7, z: -3 }, { x: 7, z: -9 },
       { x: 10, z: 12 }, { x: 10, z: 6 }, { x: 10, z: 0 }, { x: 10, z: -6 }, { x: 10, z: -12 }
     ];
     mazePositions.forEach(pos => {
       createDetailedBookshelf(pos.x, 1.0, pos.z);
     });
 
-    // Детайлни секции с книги на втория етаж в тъмнината
-    createDetailedBookshelf(-6, 3.5, -10);
-    createDetailedBookshelf(0, 3.5, -10);
-    createDetailedBookshelf(6, 3.5, -10);
-
-    // Красива 3D маса с крака в центъра на първия етаж
-    const tableGroup = new THREE.Group();
-    tableGroup.position.set(0, 0, 4);
-
-    const tableTop = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.06, 1.2), new THREE.MeshStandardMaterial({ color: 0x5d4037, roughness: 0.6 }));
-    tableTop.position.y = 0.8;
-    tableTop.castShadow = true;
-    tableTop.receiveShadow = true;
-    tableGroup.add(tableTop);
-
-    const legGeo = new THREE.CylinderGeometry(0.04, 0.04, 0.8);
-    const legMat = new THREE.MeshStandardMaterial({ color: 0x3e2723, roughness: 0.8 });
-    const legOffsets = [
-      [-0.9, -0.5], [0.9, -0.5], [-0.9, 0.5], [0.9, 0.5]
+    // Детайлни секции с книги на втория етаж в тъмнината (сгъстен лабиринт)
+    const balconyMaze = [
+      { x: -6, z: -10 }, { x: -6, z: -6 }, { x: -6, z: -2 },
+      { x: -3, z: -10 }, { x: -3, z: -6 }, { x: -3, z: -2 },
+      { x: 0, z: -10 }, { x: 0, z: -6 }, { x: 0, z: -2 },
+      { x: 3, z: -10 }, { x: 3, z: -6 }, { x: 3, z: -2 },
+      { x: 6, z: -10 }, { x: 6, z: -6 }, { x: 6, z: -2 }
     ];
-    legOffsets.forEach(offset => {
-      const leg = new THREE.Mesh(legGeo, legMat);
-      leg.position.set(offset[0], 0.4, offset[1]);
-      leg.castShadow = true;
-      tableGroup.add(leg);
+    balconyMaze.forEach(pos => {
+      createDetailedBookshelf(pos.x, 3.5, pos.z);
     });
-    scene.add(tableGroup);
-
-    // Опростен физически сблъсък за масата
-    const tableCollider = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.8, 1.2), new THREE.MeshBasicMaterial({ visible: false }));
-    tableCollider.position.set(0, 0.4, 4);
-    scene.add(tableCollider);
-    levelMap.push(tableCollider);
 
     // Подобрен 3D модел на фенерче (цилиндрична дръжка, конусна глава, леща, релефен грип, кламер)
     const flashlightMesh = new THREE.Group();
@@ -1414,6 +1398,36 @@ function buildLevel(level) {
     interactiveObjects.push({
       type: 'exit_door',
       mesh: doorMesh,
+      locked: true,
+      radius: 1.5
+    });
+
+    // Втори изход (лява страна на нивото)
+    const doorGroup2 = new THREE.Group();
+    doorGroup2.position.set(-14.5, 0, 0);
+    const doorMesh2 = new THREE.Mesh(new THREE.BoxGeometry(1.2, 2.2, 0.12), doorMat);
+    doorMesh2.position.y = 1.1;
+    doorMesh2.castShadow = true;
+    doorGroup2.add(doorMesh2);
+    scene.add(doorGroup2);
+    interactiveObjects.push({
+      type: 'exit_door',
+      mesh: doorMesh2,
+      locked: true,
+      radius: 1.5
+    });
+
+    // Трети изход (дясна страна на нивото, през стълбите)
+    const doorGroup3 = new THREE.Group();
+    doorGroup3.position.set(14.5, 0, -5);
+    const doorMesh3 = new THREE.Mesh(new THREE.BoxGeometry(1.2, 2.2, 0.12), doorMat);
+    doorMesh3.position.y = 1.1;
+    doorMesh3.castShadow = true;
+    doorGroup3.add(doorMesh3);
+    scene.add(doorGroup3);
+    interactiveObjects.push({
+      type: 'exit_door',
+      mesh: doorMesh3,
       locked: true,
       radius: 1.5
     });
@@ -1566,8 +1580,19 @@ function setupInputListeners() {
     if (!renderer || document.pointerLockElement !== renderer.domElement) return;
 
     const sensitivity = 0.0022;
-    player.rotation.x -= e.movementX * sensitivity;
-    player.rotation.y -= e.movementY * sensitivity;
+    let mx = e.movementX || 0;
+    let my = e.movementY || 0;
+
+    // If mobile touch look is active, override with touch deltas
+    if (isMobile && touchLookId !== null && touchLookX !== 0) {
+      mx = (touchLookX - lastTouchLookX) * 2;
+      my = (touchLookY - lastTouchLookY) * 2;
+      lastTouchLookX = touchLookX;
+      lastTouchLookY = touchLookY;
+    }
+
+    player.rotation.x -= mx * sensitivity;
+    player.rotation.y -= my * sensitivity;
 
     // Constrain pitch
     player.rotation.y = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, player.rotation.y));
@@ -1604,6 +1629,126 @@ function setupInputListeners() {
       pauseGame();
     }
   });
+}
+
+// -------------------------------------------------------------
+// Mobile / Touch Controls Setup
+// -------------------------------------------------------------
+const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0 || window.innerWidth < 768;
+let touchMoveX = 0, touchMoveY = 0;
+let touchLookX = 0, touchLookY = 0;
+let lastTouchLookX = 0, lastTouchLookY = 0;
+let touchJoystickActive = false;
+let touchLookId = null;
+
+function setupTouchControls() {
+  if (!isMobile) return;
+  const tc = document.getElementById('touchControls');
+  if (tc) tc.classList.add('active');
+
+  // Joystick handling
+  const joystick = document.getElementById('touchJoystick');
+  const knob = document.getElementById('touchJoystickKnob');
+  if (!joystick || !knob) return;
+
+  const joyRect = joystick.getBoundingClientRect();
+  const joyCenterX = joyRect.left + joyRect.width / 2;
+  const joyCenterY = joyRect.top + joyRect.height / 2;
+  const joyRadius = joyRect.width / 2 - 28;
+
+  function updateJoystick(touch) {
+    const dx = touch.clientX - joyCenterX;
+    const dy = touch.clientY - joyCenterY;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const clampedDist = Math.min(dist, joyRadius);
+    const angle = Math.atan2(dy, dx);
+    knob.style.transform = `translate(${-25 + Math.cos(angle) * clampedDist}px, ${-25 + Math.sin(angle) * clampedDist}px)`;
+    touchMoveX = Math.cos(angle) * (clampedDist / joyRadius);
+    touchMoveY = Math.sin(angle) * (clampedDist / joyRadius);
+  }
+
+  joystick.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    touchJoystickActive = true;
+    updateJoystick(e.changedTouches[0]);
+  }, { passive: false });
+
+  joystick.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    updateJoystick(e.changedTouches[0]);
+  }, { passive: false });
+
+  joystick.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    touchJoystickActive = false;
+    touchMoveX = 0; touchMoveY = 0;
+    knob.style.transform = 'translate(-25px, -25px)';
+  }, { passive: false });
+
+  // Look area
+  const lookArea = document.getElementById('touchLookArea');
+  if (lookArea) {
+    lookArea.addEventListener('touchstart', (e) => {
+      if (e.changedTouches.length > 0) {
+        touchLookId = e.changedTouches[0].identifier;
+        touchLookX = 0; touchLookY = 0;
+      }
+    }, { passive: true });
+
+    lookArea.addEventListener('touchmove', (e) => {
+      for (const t of e.changedTouches) {
+        if (t.identifier === touchLookId) {
+          touchLookX = t.clientX;
+          touchLookY = t.clientY;
+        }
+      }
+    }, { passive: true });
+
+    lookArea.addEventListener('touchend', (e) => {
+      for (const t of e.changedTouches) {
+        if (t.identifier === touchLookId) {
+          touchLookId = null;
+        }
+      }
+    }, { passive: true });
+  }
+
+  // Buttons
+  document.getElementById('touchInteract')?.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    performInteraction();
+  }, { passive: false });
+
+  document.getElementById('touchJump')?.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    if (gameActive && !gamePaused && !player.hiding && player.isGrounded) {
+      player.velocity.y = player.jumpStrength;
+      player.isGrounded = false;
+      playSound('step');
+    }
+  }, { passive: false });
+
+  document.getElementById('touchCrouch')?.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    player.isCrawling = !player.isCrawling;
+  }, { passive: false });
+
+  document.getElementById('touchFlashlight')?.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    toggleFlashlight();
+  }, { passive: false });
+}
+
+// Apply touch input to movement in the game loop
+function applyTouchInput() {
+  if (!isMobile) return;
+  if (touchJoystickActive) {
+    keys.w = touchMoveY < -0.3;
+    keys.s = touchMoveY > 0.3;
+    keys.a = touchMoveX < -0.3;
+    keys.d = touchMoveX > 0.3;
+  }
+  // Look input applied in mousemove handler simulation
 }
 
 function toggleFlashlight() {
@@ -1758,6 +1903,7 @@ function gameLoop() {
 }
 
 function handlePlayerMovement(delta) {
+  applyTouchInput();
   // Movement Speed configuration
   let speed = player.speed;
   if (keys.shift && player.stamina > 0 && (keys.w || keys.a || keys.s || keys.d)) {
@@ -1963,7 +2109,27 @@ function updateKoceAI(delta) {
   dir.y = 0;
   if (dir.lengthSq() > 0.01) {
     dir.normalize();
-    koce.position.addScaledVector(dir, currentSpeed);
+    const proposedX = koce.position.x + dir.x * currentSpeed;
+    const proposedZ = koce.position.z + dir.z * currentSpeed;
+    
+    // Koce collision with levelMap (try X and Z independently for sliding)
+    const koceRadius = 0.4;
+    let blockedX = false, blockedZ = false;
+    for (const obj of levelMap) {
+      if (!obj.geometry || !obj.geometry.parameters) continue;
+      const box = new THREE.Box3().setFromObject(obj);
+      const testX = new THREE.Vector3(proposedX, koce.position.y, koce.position.z);
+      if (box.containsPoint(testX) || box.distanceToPoint(testX) < koceRadius) {
+        blockedX = true;
+      }
+      const testZ = new THREE.Vector3(koce.position.x, koce.position.y, proposedZ);
+      if (box.containsPoint(testZ) || box.distanceToPoint(testZ) < koceRadius) {
+        blockedZ = true;
+      }
+    }
+    
+    koce.position.x = blockedX ? koce.position.x : proposedX;
+    koce.position.z = blockedZ ? koce.position.z : proposedZ;
     koce.mesh.position.copy(koce.position);
     
     // Look rotation
