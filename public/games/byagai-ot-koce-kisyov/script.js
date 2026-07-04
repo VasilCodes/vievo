@@ -961,8 +961,8 @@ function buildLevel(level) {
   interactiveObjects.forEach(obj => scene.remove(obj.mesh));
   interactiveObjects = [];
 
-  const wallMat = new THREE.MeshStandardMaterial({ color: 0x1e1e24, roughness: 0.8 });
-  const floorMat = new THREE.MeshStandardMaterial({ color: 0x111116, roughness: 0.9 });
+  const wallMat = new THREE.MeshStandardMaterial({ color: 0x3e3e4a, roughness: 0.8 });
+  const floorMat = new THREE.MeshStandardMaterial({ color: 0x5c4033, roughness: 0.6 }); // warm wooden floor
 
   const size = 30;
   const floorGeo = new THREE.PlaneGeometry(size, size);
@@ -1079,7 +1079,7 @@ function buildLevel(level) {
       bulb.position.copy(pos);
       scene.add(bulb);
 
-      const light = new THREE.PointLight(0xffd59a, 2.2, 10);
+      const light = new THREE.PointLight(0xffd59a, 4.0, 18);
       light.position.copy(pos);
       light.castShadow = true;
       scene.add(light);
@@ -1286,17 +1286,18 @@ function setupInputListeners() {
 
   window.addEventListener('keydown', (e) => {
     const key = e.key.toLowerCase();
-    if (key === 'w') keys.w = true;
-    if (key === 'a') keys.a = true;
-    if (key === 's') keys.s = true;
-    if (key === 'd') keys.d = true;
-    if (e.key === 'Shift') keys.shift = true;
-    if (e.key === 'Control') {
+    const code = e.code;
+    if (key === 'w' || code === 'KeyW' || key === 'у') keys.w = true;
+    if (key === 'a' || code === 'KeyA' || key === 'ф') keys.a = true;
+    if (key === 's' || code === 'KeyS' || key === 'я') keys.s = true;
+    if (key === 'd' || code === 'KeyD' || key === 'в') keys.d = true;
+    if (e.key === 'Shift' || code === 'ShiftLeft' || code === 'ShiftRight') keys.shift = true;
+    if (e.key === 'Control' || code === 'ControlLeft' || code === 'ControlRight') {
       keys.ctrl = true;
       player.isCrawling = true;
     }
-    if (key === 'f') toggleFlashlight();
-    if (key === 'e') performInteraction();
+    if (key === 'f' || code === 'KeyF' || key === 'а') toggleFlashlight();
+    if (key === 'e' || code === 'KeyE' || key === 'у') performInteraction();
     
     // Slots 1-4
     if (['1','2','3','4'].includes(key)) {
@@ -1308,12 +1309,13 @@ function setupInputListeners() {
 
   window.addEventListener('keyup', (e) => {
     const key = e.key.toLowerCase();
-    if (key === 'w') keys.w = false;
-    if (key === 'a') keys.a = false;
-    if (key === 's') keys.s = false;
-    if (key === 'd') keys.d = false;
-    if (e.key === 'Shift') keys.shift = false;
-    if (e.key === 'Control') {
+    const code = e.code;
+    if (key === 'w' || code === 'KeyW' || key === 'у') keys.w = false;
+    if (key === 'a' || code === 'KeyA' || key === 'ф') keys.a = false;
+    if (key === 's' || code === 'KeyS' || key === 'я') keys.s = false;
+    if (key === 'd' || code === 'KeyD' || key === 'в') keys.d = false;
+    if (e.key === 'Shift' || code === 'ShiftLeft' || code === 'ShiftRight') keys.shift = false;
+    if (e.key === 'Control' || code === 'ControlLeft' || code === 'ControlRight') {
       keys.ctrl = false;
       player.isCrawling = false;
     }
