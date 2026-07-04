@@ -22,7 +22,10 @@ const player = {
   noiseMultiplier: 1.0,
   position: new THREE.Vector3(0, 0, 0),
   rotation: new THREE.Vector2(0, 0), // yaw, pitch
-  isCrawling: false
+  isCrawling: false,
+  velocity: new THREE.Vector3(0, 0, 0),
+  isGrounded: true,
+  jumpStrength: 5.2
 };
 
 // Key controls
@@ -811,7 +814,7 @@ let animationFrameId = null;
 function initEngine() {
   const canvas = document.getElementById('gameCanvas');
   scene = new THREE.Scene();
-  scene.fog = new THREE.FogExp2(0x020205, 0.12);
+  scene.fog = new THREE.FogExp2(0x1a1a24, 0.04);
 
   camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
   
@@ -822,11 +825,11 @@ function initEngine() {
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
   // Lights
-  const ambient = new THREE.AmbientLight(0x020205, 0.15);
+  const ambient = new THREE.AmbientLight(0xffffff, 0.45);
   scene.add(ambient);
 
   // Directional Light
-  const dirLight = new THREE.DirectionalLight(0x08080f, 0.3);
+  const dirLight = new THREE.DirectionalLight(0xffffff, 0.55);
   dirLight.position.set(10, 20, 10);
   scene.add(dirLight);
 
@@ -975,13 +978,13 @@ function buildLevel(level) {
   const ceilGeo = new THREE.PlaneGeometry(size, size);
   const ceiling = new THREE.Mesh(ceilGeo, wallMat);
   ceiling.rotation.x = Math.PI / 2;
-  ceiling.position.y = 4;
+  ceiling.position.y = 5.5;
   scene.add(ceiling);
   levelMap.push(ceiling);
 
-  const perimeterGeo = new THREE.BoxGeometry(size, 4, 0.2);
+  const perimeterGeo = new THREE.BoxGeometry(size, 5.5, 0.2);
   const backWall = new THREE.Mesh(perimeterGeo, wallMat);
-  backWall.position.set(0, 2, -size / 2);
+  backWall.position.set(0, 2.75, -size / 2);
   backWall.castShadow = true;
   backWall.receiveShadow = true;
   scene.add(backWall);
@@ -992,9 +995,9 @@ function buildLevel(level) {
   scene.add(frontWall);
   levelMap.push(frontWall);
 
-  const sideWallGeo = new THREE.BoxGeometry(0.2, 4, size);
+  const sideWallGeo = new THREE.BoxGeometry(0.2, 5.5, size);
   const leftWall = new THREE.Mesh(sideWallGeo, wallMat);
-  leftWall.position.set(-size / 2, 2, 0);
+  leftWall.position.set(-size / 2, 2.75, 0);
   leftWall.castShadow = true;
   leftWall.receiveShadow = true;
   scene.add(leftWall);
@@ -1009,12 +1012,12 @@ function buildLevel(level) {
     showNotification("Намери фенерчето на 1-вия етаж и се качи по стълбите на тъмния 2-ри етаж за ключа!", "info");
 
     // Декоративни класически колони по стените на библиотеката
-    const colGeo = new THREE.CylinderGeometry(0.2, 0.2, 4, 8);
+    const colGeo = new THREE.CylinderGeometry(0.2, 0.2, 5.5, 8);
     const colMat = new THREE.MeshStandardMaterial({ color: 0x27272a, roughness: 0.8 });
     for (let cx = -14.8; cx <= 14.8; cx += 29.6) {
       for (let cz = -10; cz <= 10; cz += 10) {
         const col = new THREE.Mesh(colGeo, colMat);
-        col.position.set(cx, 2, cz);
+        col.position.set(cx, 2.75, cz);
         col.castShadow = true;
         col.receiveShadow = true;
         scene.add(col);
@@ -1085,9 +1088,22 @@ function buildLevel(level) {
       scene.add(light);
     });
 
-    // Детайлни секции с книги на първия етаж
-    createDetailedBookshelf(-8, 1.0, 5);
-    createDetailedBookshelf(8, 1.0, 5);
+    // Лабиринт от детайлни секции с книги на първия етаж
+    const mazePositions = [
+      { x: -10, z: 10 },
+      { x: -10, z: 0 },
+      { x: -10, z: -10 },
+      { x: -5, z: 5 },
+      { x: -5, z: -5 },
+      { x: 5, z: 10 },
+      { x: 5, z: -5 },
+      { x: 5, z: -10 },
+      { x: 10, z: 5 },
+      { x: 10, z: -5 }
+    ];
+    mazePositions.forEach(pos => {
+      createDetailedBookshelf(pos.x, 1.0, pos.z);
+    });
 
     // Детайлни секции с книги на втория етаж в тъмнината
     createDetailedBookshelf(-6, 3.5, -10);
@@ -1123,13 +1139,41 @@ function buildLevel(level) {
     scene.add(tableCollider);
     levelMap.push(tableCollider);
 
-    // Фенерче върху масата
-    const flashlightGeo = new THREE.CylinderGeometry(0.04, 0.04, 0.25, 8);
-    const flashlightMat = new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.8 });
-    const flashlightMesh = new THREE.Mesh(flashlightGeo, flashlightMat);
+    // Супер детайлен 3D модел на фенерчето (състоящ се от дръжка, глава, стъкло и бутон)
+    const flashlightMesh = new THREE.Group();
+    
+    // Дръжка
+    const handleGeo = new THREE.CylinderGeometry(0.02, 0.02, 0.16, 8);
+    const handleMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.5 });
+    const handle = new THREE.Mesh(handleGeo, handleMat);
+    handle.rotation.x = Math.PI / 2;
+    flashlightMesh.add(handle);
+
+    // Сребърна глава
+    const headGeo = new THREE.CylinderGeometry(0.035, 0.025, 0.06, 8);
+    const headMat = new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness: 0.8, roughness: 0.2 });
+    const head = new THREE.Mesh(headGeo, headMat);
+    head.position.z = 0.1;
+    head.rotation.x = Math.PI / 2;
+    flashlightMesh.add(head);
+
+    // Светещо жълто стъкло (леща) на върха
+    const lensGeo = new THREE.SphereGeometry(0.025, 8, 8);
+    const lensMat = new THREE.MeshBasicMaterial({ color: 0xffeb3b });
+    const lens = new THREE.Mesh(lensGeo, lensMat);
+    lens.position.z = 0.13;
+    flashlightMesh.add(lens);
+
+    // Червено копче за включване
+    const switchGeo = new THREE.BoxGeometry(0.008, 0.008, 0.015);
+    const switchMat = new THREE.MeshBasicMaterial({ color: 0xff3333 });
+    const sw = new THREE.Mesh(switchGeo, switchMat);
+    sw.position.set(0, 0.022, 0);
+    flashlightMesh.add(sw);
+
     flashlightMesh.position.set(0, 0.85, 4);
-    flashlightMesh.rotation.x = Math.PI / 2;
     scene.add(flashlightMesh);
+
     interactiveObjects.push({
       type: 'item',
       name: 'Фенерче',
@@ -1296,6 +1340,13 @@ function setupInputListeners() {
       keys.ctrl = true;
       player.isCrawling = true;
     }
+    if (code === 'Space') {
+      if (gameActive && !gamePaused && !player.hiding && player.isGrounded) {
+        player.velocity.y = player.jumpStrength;
+        player.isGrounded = false;
+        playSound('step');
+      }
+    }
     if (key === 'f' || code === 'KeyF' || key === 'а') toggleFlashlight();
     if (key === 'e' || code === 'KeyE' || key === 'у') performInteraction();
     
@@ -1318,6 +1369,14 @@ function setupInputListeners() {
     if (e.key === 'Control' || code === 'ControlLeft' || code === 'ControlRight') {
       keys.ctrl = false;
       player.isCrawling = false;
+    }
+  });
+
+  window.addEventListener('mousedown', (e) => {
+    if (e.button === 0) { // Left click (MOUSE1)
+      if (gameActive && !gamePaused && !player.hiding) {
+        toggleFlashlight();
+      }
     }
   });
 
@@ -1430,9 +1489,61 @@ function performInteraction() {
   }
 }
 
-// -------------------------------------------------------------
-// Core Engine Tick (Logic and 3D rendering loop)
-// -------------------------------------------------------------
+function updateInteractionPrompt() {
+  const promptEl = document.getElementById('interactionPrompt');
+  const crosshair = document.querySelector('.crosshair');
+  if (!promptEl) return;
+
+  const raycaster = new THREE.Raycaster();
+  raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
+
+  const meshes = [];
+  interactiveObjects.forEach(o => {
+    if (o.mesh.isGroup) {
+      o.mesh.traverse(child => {
+        if (child.isMesh) meshes.push(child);
+      });
+    } else {
+      meshes.push(o.mesh);
+    }
+  });
+
+  const intersects = raycaster.intersectObjects(meshes);
+
+  if (intersects.length > 0 && intersects[0].distance < 3.0) {
+    const hitMesh = intersects[0].object;
+    const targetObj = interactiveObjects.find(o => {
+      if (o.mesh === hitMesh) return true;
+      let found = false;
+      o.mesh.traverse(child => {
+        if (child === hitMesh) found = true;
+      });
+      return found;
+    });
+
+    if (targetObj) {
+      if (crosshair) crosshair.classList.add('interactable');
+      promptEl.classList.add('active');
+      
+      if (targetObj.itemId === 'flashlight') {
+        promptEl.innerHTML = `Фенер <span style="color: #ffd700;">[E]</span>`;
+      } else if (targetObj.itemId === 'door_key') {
+        promptEl.innerHTML = `Ключ за врата <span style="color: #ffd700;">[E]</span>`;
+      } else if (targetObj.type === 'locker') {
+        promptEl.innerHTML = `Скрий се в шкафче <span style="color: #ffd700;">[E]</span>`;
+      } else if (targetObj.type === 'exit_door') {
+        promptEl.innerHTML = `Отключи врата <span style="color: #ffd700;">[E]</span>`;
+      } else {
+        promptEl.innerHTML = `Взаимодействие <span style="color: #ffd700;">[E]</span>`;
+      }
+      return;
+    }
+  }
+
+  if (crosshair) crosshair.classList.remove('interactable');
+  promptEl.classList.remove('active');
+}
+
 let clock = new THREE.Clock();
 
 function gameLoop() {
@@ -1453,6 +1564,7 @@ function gameLoop() {
   updateKoceAI(delta);
   updateNoiseHUD();
   updateFlashlightBattery(delta);
+  updateInteractionPrompt();
 
   renderer.render(scene, camera);
 }
@@ -1479,6 +1591,7 @@ function handlePlayerMovement(delta) {
   }
 
   // Speed mods
+  // Speed mods
   speed *= player.speedMultiplier;
   player.noise *= player.noiseMultiplier;
 
@@ -1504,8 +1617,8 @@ function handlePlayerMovement(delta) {
       if (mesh === levelMap[0] || mesh === levelMap[1]) return; // ignore floor and ceil
       const box = new THREE.Box3().setFromObject(mesh);
       const playerBox = new THREE.Box3(
-        new THREE.Vector3(player.position.x - 0.25, 0, player.position.z - 0.25),
-        new THREE.Vector3(player.position.x + 0.25, 2, player.position.z + 0.25)
+        new THREE.Vector3(player.position.x - 0.25, player.position.y - player.height, player.position.z - 0.25),
+        new THREE.Vector3(player.position.x + 0.25, player.position.y + 0.4, player.position.z + 0.25)
       );
       if (box.intersectsBox(playerBox)) {
         collision = true;
@@ -1517,9 +1630,57 @@ function handlePlayerMovement(delta) {
     }
   }
 
-  // Update Camera positions
+  // Gravity physics logic
+  if (!player.isGrounded) {
+    player.velocity.y -= 9.8 * 2.0 * delta; // standard gravity
+    player.position.y += player.velocity.y * delta;
+
+    // Check landing Y height
+    let standY = player.height;
+    
+    // Balcony landing check
+    if (player.position.x >= -8 && player.position.x <= 8 && player.position.z >= -15 && player.position.z <= 1) {
+      const balconyHeight = 2.5 + player.height;
+      if (player.position.y >= balconyHeight - 0.2 && player.velocity.y <= 0) {
+        standY = balconyHeight;
+      }
+    }
+
+    if (player.position.y <= standY) {
+      player.position.y = standY;
+      player.velocity.y = 0;
+      player.isGrounded = true;
+    }
+  } else {
+    // Grounded height checks
+    let expectedY = player.height;
+    if (player.position.x >= -8 && player.position.x <= 8 && player.position.z >= -15 && player.position.z <= 1) {
+      expectedY = 2.5 + player.height;
+    }
+    
+    // Smooth step climbing on stairs: x = -5, z = -1 to 4.5
+    if (player.position.x >= -6.5 && player.position.x <= -3.5 && player.position.z >= -1.5 && player.position.z <= 4.5) {
+      const t = (4.5 - player.position.z) / 5.5; // 0 to 1
+      const stairHeight = Math.max(0, Math.min(2.53, t * 2.53));
+      expectedY = stairHeight + player.height;
+    }
+
+    // Apply height adjustment
+    if (Math.abs(player.position.y - expectedY) > 0.05) {
+      if (player.position.y > expectedY) {
+        player.isGrounded = false;
+        player.velocity.y = 0;
+      } else {
+        player.position.y = expectedY;
+      }
+    }
+  }
+
+  // Update Camera position
   camera.position.copy(player.position);
-  camera.position.y = player.isCrawling ? 0.7 : player.height;
+  if (player.isCrawling) {
+    camera.position.y -= 0.6;
+  }
 
   // Footstep audio simulation
   if ((keys.w || keys.a || keys.s || keys.d) && Math.floor(clock.getElapsedTime() * (keys.shift ? 4.5 : 2.5)) % 2 === 0) {
