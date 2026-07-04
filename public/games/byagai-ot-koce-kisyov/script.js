@@ -655,234 +655,328 @@ function updateSkinPreview(colorHex, accessory) {
 
 function createCharacterModel(shirtColorHex, accessory = 'none', pantsColorHex = '#1d3557', hairStyle = 'brown_short') {
   const group = new THREE.Group();
+  const c = new THREE.Color(shirtColorHex);
   
-  const shirtMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(shirtColorHex), roughness: 0.5 });
-  const skinMat = new THREE.MeshStandardMaterial({ color: 0xffdbac, roughness: 0.6 }); // skin tone
-  const pantsMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(pantsColorHex), roughness: 0.7 });
-  const shoeMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.8 }); // black shoes
+  // Materials
+  const shirtMat = new THREE.MeshStandardMaterial({ color: c, roughness: 0.4, metalness: 0.05 });
+  const darkShirtMat = new THREE.MeshStandardMaterial({ color: c.clone().multiplyScalar(0.7), roughness: 0.5 });
+  const skinMat = new THREE.MeshStandardMaterial({ color: 0xffdbac, roughness: 0.5 });
+  const darkSkinMat = new THREE.MeshStandardMaterial({ color: 0xe8c090, roughness: 0.5 });
+  const pantsMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(pantsColorHex), roughness: 0.6 });
+  const darkPantsMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(pantsColorHex).multiplyScalar(0.7), roughness: 0.7 });
+  const shoeMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.7, metalness: 0.1 });
+  const soleMat = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.9 });
+  const whiteMat = new THREE.MeshStandardMaterial({ color: 0xf0f0f0, roughness: 0.3 });
+  const pupilMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.1 });
+  const mouthMat = new THREE.MeshStandardMaterial({ color: 0xd94f5a, roughness: 0.3 });
+  const browMat = new THREE.MeshStandardMaterial({ color: 0x5c4033, roughness: 0.8 });
+  const blushMat = new THREE.MeshStandardMaterial({ color: 0xffa5a5, roughness: 0.5, transparent: true, opacity: 0.35 });
   
-  // Body (rounded box-like, with shoulders)
-  const bodyGeo = new THREE.BoxGeometry(0.38, 0.5, 0.2);
-  const body = new THREE.Mesh(bodyGeo, shirtMat);
-  body.position.y = 0.45;
-  body.castShadow = true;
-  body.receiveShadow = true;
-  group.add(body);
+  const bodyCenter = 0.45;
+  const headCenter = 0.87;
   
-  // Рамене (малки сфери отстрани)
-  const shoulderMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(shirtColorHex), roughness: 0.5 });
+  // === TORSO ===
+  // Upper body (chest, slightly tapered)
+  const chestGeo = new THREE.BoxGeometry(0.34, 0.28, 0.19);
+  const chest = new THREE.Mesh(chestGeo, shirtMat);
+  chest.position.set(0, bodyCenter + 0.11, 0);
+  chest.castShadow = true; chest.receiveShadow = true;
+  group.add(chest);
+  
+  // Lower body (waist, slightly narrower)
+  const waistGeo = new THREE.BoxGeometry(0.30, 0.18, 0.16);
+  const waist = new THREE.Mesh(waistGeo, darkShirtMat);
+  waist.position.set(0, bodyCenter - 0.14, 0);
+  waist.castShadow = true;
+  group.add(waist);
+  
+  // Яка на врата (вратовръзка)
+  const collarMat = new THREE.MeshStandardMaterial({ color: c.clone().multiplyScalar(0.5), roughness: 0.5 });
+  const collarGeo = new THREE.BoxGeometry(0.12, 0.02, 0.06);
+  const collar = new THREE.Mesh(collarGeo, collarMat);
+  collar.position.set(0, bodyCenter + 0.27, 0.05);
+  group.add(collar);
+  
+  // Лява презрамка на ризата
+  const strapMat = new THREE.MeshStandardMaterial({ color: c, roughness: 0.4 });
   for (let side = -1; side <= 1; side += 2) {
-    const shoulderGeo = new THREE.SphereGeometry(0.07, 6, 6);
+    const strapGeo = new THREE.BoxGeometry(0.06, 0.10, 0.10);
+    const strap = new THREE.Mesh(strapGeo, strapMat);
+    strap.position.set(side * 0.17, bodyCenter + 0.24, 0);
+    strap.rotation.z = side * 0.2;
+    group.add(strap);
+  }
+  
+  // Рамене (по-изразени)
+  const shoulderMat = new THREE.MeshStandardMaterial({ color: c, roughness: 0.4 });
+  for (let side = -1; side <= 1; side += 2) {
+    const shoulderGeo = new THREE.SphereGeometry(0.08, 8, 6);
     const shoulder = new THREE.Mesh(shoulderGeo, shoulderMat);
-    shoulder.position.set(side * 0.2, 0.68, 0);
+    shoulder.position.set(side * 0.20, bodyCenter + 0.10, 0);
     shoulder.scale.set(1, 0.7, 0.8);
     group.add(shoulder);
   }
 
-  // Neck (small flesh cylinder)
-  const neckGeo = new THREE.CylinderGeometry(0.06, 0.08, 0.06, 6);
+  // Колан
+  const beltMat = new THREE.MeshStandardMaterial({ color: 0x2a1a0a, roughness: 0.7 });
+  const beltGeo = new THREE.BoxGeometry(0.30, 0.025, 0.18);
+  const belt = new THREE.Mesh(beltGeo, beltMat);
+  belt.position.set(0, bodyCenter - 0.05, 0);
+  group.add(belt);
+  
+  // Тока на колана
+  const buckleMat = new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness: 0.8, roughness: 0.2 });
+  const buckleGeo = new THREE.BoxGeometry(0.04, 0.03, 0.02);
+  const buckle = new THREE.Mesh(buckleGeo, buckleMat);
+  buckle.position.set(0, bodyCenter - 0.05, 0.10);
+  group.add(buckle);
+
+  // === NECK ===
+  const neckGeo = new THREE.CylinderGeometry(0.055, 0.07, 0.06, 8);
   const neck = new THREE.Mesh(neckGeo, skinMat);
-  neck.position.set(0, 0.73, 0);
+  neck.position.set(0, bodyCenter + 0.28, 0);
   group.add(neck);
 
-  // Head (Sphere for smooth look)
-  const headGeo = new THREE.SphereGeometry(0.12, 10, 8);
+  // === HEAD ===
+  const headGeo = new THREE.SphereGeometry(0.13, 12, 10);
   const head = new THREE.Mesh(headGeo, skinMat);
-  head.position.y = 0.85;
-  head.scale.set(1, 1.1, 0.9);
+  head.position.set(0, headCenter, 0);
+  head.scale.set(1, 1.05, 0.92);
   head.castShadow = true;
   group.add(head);
-
-  // Eyes (Two small white spheres with black pupils)
-  const whiteMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-  const pupilMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
   
-  const eyeGeo = new THREE.SphereGeometry(0.025, 6, 6);
-  const leftWhite = new THREE.Mesh(eyeGeo, whiteMat);
-  leftWhite.position.set(-0.06, 0.88, 0.11);
-  group.add(leftWhite);
-  const rightWhite = leftWhite.clone();
-  rightWhite.position.x = 0.06;
-  group.add(rightWhite);
-  
-  const pupilGeo = new THREE.SphereGeometry(0.012, 6, 6);
-  const leftPupil = new THREE.Mesh(pupilGeo, pupilMat);
-  leftPupil.position.set(-0.06, 0.88, 0.13);
-  group.add(leftPupil);
-  const rightPupil = leftPupil.clone();
-  rightPupil.position.x = 0.06;
-  group.add(rightPupil);
+  // Долна челюст (леко сплескана сфера под главата)
+  const jawGeo = new THREE.SphereGeometry(0.10, 8, 6);
+  const jaw = new THREE.Mesh(jawGeo, skinMat);
+  jaw.position.set(0, headCenter - 0.08, 0.02);
+  jaw.scale.set(1.1, 0.6, 0.9);
+  group.add(jaw);
 
-  // Mouth (Small curved red box)
-  const mouthGeo = new THREE.BoxGeometry(0.06, 0.015, 0.01);
-  const mouthMat = new THREE.MeshBasicMaterial({ color: 0xe63946 });
-  const mouth = new THREE.Mesh(mouthGeo, mouthMat);
-  mouth.position.set(0, 0.79, 0.12);
+  // === FACE DETAILS ===
+  // Вежди
+  for (let side = -1; side <= 1; side += 2) {
+    const browGeo = new THREE.BoxGeometry(0.035, 0.005, 0.005);
+    const brow = new THREE.Mesh(browGeo, browMat);
+    brow.position.set(side * 0.055, headCenter + 0.04, 0.115);
+    brow.rotation.z = side * 0.1;
+    group.add(brow);
+  }
+  
+  // Очи (бяло + ирис + зеница)
+  for (let side = -1; side <= 1; side += 2) {
+    const eyeWhite = new THREE.Mesh(new THREE.SphereGeometry(0.028, 8, 6), whiteMat);
+    eyeWhite.position.set(side * 0.055, headCenter + 0.01, 0.115);
+    eyeWhite.scale.set(1, 0.85, 0.5);
+    group.add(eyeWhite);
+    
+    const irisMat = new THREE.MeshStandardMaterial({ color: 0x4a7db4, roughness: 0.2 });
+    const iris = new THREE.Mesh(new THREE.SphereGeometry(0.018, 8, 6), irisMat);
+    iris.position.set(side * 0.055, headCenter + 0.01, 0.125);
+    iris.scale.set(1, 0.9, 0.4);
+    group.add(iris);
+    
+    const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.010, 6, 6), pupilMat);
+    pupil.position.set(side * 0.055, headCenter + 0.01, 0.130);
+    pupil.scale.set(1, 1, 0.3);
+    group.add(pupil);
+  }
+  
+  // Блясък в очите
+  const gleamMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  for (let side = -1; side <= 1; side += 2) {
+    const gleam = new THREE.Mesh(new THREE.SphereGeometry(0.004, 4, 4), gleamMat);
+    gleam.position.set(side * 0.045, headCenter + 0.025, 0.132);
+    group.add(gleam);
+  }
+  
+  // Нос (малък триъгълник)
+  const noseMat = new THREE.MeshStandardMaterial({ color: 0xf0c8a0, roughness: 0.5 });
+  const noseGeo = new THREE.ConeGeometry(0.012, 0.02, 4);
+  const nose = new THREE.Mesh(noseGeo, noseMat);
+  nose.position.set(0, headCenter - 0.025, 0.125);
+  nose.rotation.x = 0.3;
+  group.add(nose);
+  
+  // Уста (извита линия)
+  const mouth = new THREE.Mesh(new THREE.BoxGeometry(0.055, 0.01, 0.005), mouthMat);
+  mouth.position.set(0, headCenter - 0.065, 0.12);
   group.add(mouth);
+  
+  // Долна устна
+  const lipMat = new THREE.MeshStandardMaterial({ color: 0xe08080, roughness: 0.3 });
+  const lip = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.005, 0.005), lipMat);
+  lip.position.set(0, headCenter - 0.075, 0.12);
+  group.add(lip);
+  
+  // Румян (леко зачервяване по бузите)
+  for (let side = -1; side <= 1; side += 2) {
+    const blush = new THREE.Mesh(new THREE.SphereGeometry(0.02, 6, 4), blushMat);
+    blush.position.set(side * 0.07, headCenter - 0.03, 0.11);
+    blush.scale.set(1, 0.8, 0.5);
+    group.add(blush);
+  }
+  
+  // Уши (малки дискове отстрани)
+  const earMat = new THREE.MeshStandardMaterial({ color: 0xf0c8a0, roughness: 0.5 });
+  for (let side = -1; side <= 1; side += 2) {
+    const ear = new THREE.Mesh(new THREE.SphereGeometry(0.018, 6, 4), earMat);
+    ear.position.set(side * 0.13, headCenter - 0.01, 0);
+    ear.scale.set(0.6, 1, 0.6);
+    group.add(ear);
+  }
 
-  // Hair Styles
-  let hairColor = 0x5c4033; // Default brown
-  if (hairStyle === 'black_spiky') hairColor = 0x111111;
-  else if (hairStyle === 'blonde_long') hairColor = 0xf5e3a0;
+  // === HAIR ===
+  let hairColor = 0x5c4033;
+  if (hairStyle === 'black_spiky') hairColor = 0x181818;
+  else if (hairStyle === 'blonde_long') hairColor = 0xe8d48b;
   
   if (hairStyle !== 'bald') {
-    const hairMat = new THREE.MeshStandardMaterial({ color: hairColor, roughness: 0.8 });
+    const hairMat = new THREE.MeshStandardMaterial({ color: hairColor, roughness: 0.75 });
+    const darkHairMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(hairColor).multiplyScalar(0.6), roughness: 0.8 });
     
-    // Main hair cap (dome shape)
-    const capGeo = new THREE.SphereGeometry(0.14, 10, 8);
-    const cap = new THREE.Mesh(capGeo, hairMat);
-    cap.position.set(0, 0.96, 0);
-    cap.scale.set(1, 0.5, 1);
-    cap.castShadow = true;
-    group.add(cap);
-
-    // Back hair flap
-    const backGeo = new THREE.BoxGeometry(0.26, 0.16, 0.06);
-    const backFlap = new THREE.Mesh(backGeo, hairMat);
-    backFlap.position.set(0, 0.88, -0.1);
-    backFlap.castShadow = true;
-    group.add(backFlap);
+    // Основна коса (купол)
+    const baseHair = new THREE.Mesh(new THREE.SphereGeometry(0.145, 10, 8), hairMat);
+    baseHair.position.set(0, headCenter + 0.06, 0);
+    baseHair.scale.set(1, 0.55, 1.05);
+    baseHair.castShadow = true;
+    group.add(baseHair);
+    
+    // Преден бретон
+    const fringe = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.04, 0.07), hairMat);
+    fringe.position.set(0, headCenter + 0.05, 0.12);
+    fringe.rotation.x = -0.15;
+    group.add(fringe);
+    
+    // Странична коса
+    for (let side = -1; side <= 1; side += 2) {
+      const sideHair = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.12, 0.20), hairMat);
+      sideHair.position.set(side * 0.13, headCenter - 0.02, 0);
+      sideHair.rotation.z = side * 0.1;
+      group.add(sideHair);
+    }
+    
+    // Тилен косъм
+    const backHairGeo = new THREE.BoxGeometry(0.22, 0.15, 0.08);
+    const backHair = new THREE.Mesh(backHairGeo, darkHairMat);
+    backHair.position.set(0, headCenter - 0.01, -0.11);
+    group.add(backHair);
 
     if (hairStyle === 'black_spiky') {
-      // Add spiky segments (cone shaped)
-      const spikeGeo = new THREE.ConeGeometry(0.025, 0.07, 4);
-      for (let offset = -0.09; offset <= 0.09; offset += 0.06) {
-        const spike = new THREE.Mesh(spikeGeo, hairMat);
-        spike.position.set(offset, 1.04, 0.03);
-        spike.rotation.z = offset * -1.5;
-        spike.castShadow = true;
+      // Бодливи кичури нагоре
+      for (let i = 0; i < 7; i++) {
+        const angle = (i / 7) * Math.PI * 2;
+        const spike = new THREE.Mesh(new THREE.ConeGeometry(0.02, 0.08, 4), hairMat);
+        spike.position.set(Math.cos(angle) * 0.07, headCenter + 0.10, Math.sin(angle) * 0.07);
+        spike.rotation.z = Math.cos(angle) * 0.6;
+        spike.rotation.x = Math.sin(angle) * 0.6;
         group.add(spike);
       }
     } else if (hairStyle === 'blonde_long') {
-      // Add side cascades hanging down (rounded boxes)
-      const sideGeo = new THREE.BoxGeometry(0.035, 0.3, 0.24);
-      const leftSide = new THREE.Mesh(sideGeo, hairMat);
-      leftSide.position.set(-0.14, 0.79, 0.01);
-      leftSide.rotation.z = 0.08;
-      leftSide.castShadow = true;
-      group.add(leftSide);
-      const rightSide = leftSide.clone();
-      rightSide.position.x = 0.14;
-      rightSide.rotation.z = -0.08;
-      group.add(rightSide);
+      // Дълги коси отстрани
+      for (let side = -1; side <= 1; side += 2) {
+        const longLock = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.35, 0.18), hairMat);
+        longLock.position.set(side * 0.14, headCenter - 0.15, 0.01);
+        longLock.rotation.z = side * 0.12;
+        group.add(longLock);
+      }
+      // Задна дълга коса
+      const backLong = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.40, 0.04), darkHairMat);
+      backLong.position.set(0, headCenter - 0.12, -0.12);
+      group.add(backLong);
     } else {
-      // Short brown hair - add side tufts
-      const tuftGeo = new THREE.BoxGeometry(0.02, 0.04, 0.06);
-      for (let tx = -0.08; tx <= 0.08; tx += 0.08) {
-        const tuft = new THREE.Mesh(tuftGeo, hairMat);
-        tuft.position.set(tx, 1.01, 0.08);
-        tuft.rotation.x = 0.3;
+      // Къса коса - предни кичури
+      for (let tx = -0.06; tx <= 0.06; tx += 0.04) {
+        const tuft = new THREE.Mesh(new THREE.BoxGeometry(0.015, 0.05, 0.04), hairMat);
+        tuft.position.set(tx, headCenter + 0.09, 0.10);
+        tuft.rotation.x = 0.4;
         group.add(tuft);
       }
     }
   }
 
-  // Arms (Left & Right - cylinder based)
-  const armGeo = new THREE.CylinderGeometry(0.035, 0.03, 0.45, 6);
-  const leftArm = new THREE.Mesh(armGeo, shirtMat);
-  leftArm.position.set(-0.22, 0.45, 0);
-  leftArm.rotation.z = 0.15;
-  leftArm.castShadow = true;
-  group.add(leftArm);
-  
-  const rightArm = leftArm.clone();
-  rightArm.position.x = 0.22;
-  rightArm.rotation.z = -0.15;
-  group.add(rightArm);
-  
-  // Hands (skin colored small spheres)
-  const handGeo = new THREE.SphereGeometry(0.035, 6, 6);
-  const leftHand = new THREE.Mesh(handGeo, skinMat);
-  leftHand.position.set(-0.24, 0.2, 0);
-  leftHand.scale.set(1, 0.8, 1);
-  group.add(leftHand);
+  // === ARMS ===
+  for (let side = -1; side <= 1; side += 2) {
+    // Горна част на ръката
+    const upperArm = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.03, 0.25, 6), shirtMat);
+    upperArm.position.set(side * 0.22, bodyCenter + 0.08, 0);
+    upperArm.rotation.z = side * 0.20;
+    upperArm.castShadow = true;
+    group.add(upperArm);
+    
+    // Долна част на ръката (предмишница)
+    const forearmMat = new THREE.MeshStandardMaterial({ color: c.clone().multiplyScalar(0.85), roughness: 0.5 });
+    const forearm = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.022, 0.18, 6), forearmMat);
+    forearm.position.set(side * 0.25, bodyCenter - 0.12, 0);
+    forearm.rotation.z = side * 0.15;
+    group.add(forearm);
+    
+    // Ръка (китка + длан)
+    const hand = new THREE.Mesh(new THREE.SphereGeometry(0.028, 6, 4), skinMat);
+    hand.position.set(side * 0.26, bodyCenter - 0.26, 0);
+    hand.scale.set(1, 0.9, 0.8);
+    group.add(hand);
+  }
 
-  const rightHand = leftHand.clone();
-  rightHand.position.x = 0.24;
-  group.add(rightHand);
+  // === LEGS ===
+  for (let side = -1; side <= 1; side += 2) {
+    // Горна част на крак (бедро)
+    const thigh = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.045, 0.18, 6), pantsMat);
+    thigh.position.set(side * 0.09, 0.28, 0);
+    thigh.castShadow = true;
+    group.add(thigh);
+    
+    // Долна част (пищял)
+    const shinMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(pantsColorHex).multiplyScalar(0.85), roughness: 0.6 });
+    const shin = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.035, 0.18, 6), shinMat);
+    shin.position.set(side * 0.09, 0.08, 0);
+    group.add(shin);
+    
+    // Обувка
+    const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.055, 0.17), shoeMat);
+    shoe.position.set(side * 0.09, 0.02, 0.015);
+    shoe.castShadow = true;
+    group.add(shoe);
+    
+    // Подметка
+    const sole = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.015, 0.17), soleMat);
+    sole.position.set(side * 0.09, -0.01, 0.015);
+    group.add(sole);
+    
+    // Нос на обувката
+    const toeCap = new THREE.Mesh(new THREE.SphereGeometry(0.03, 4, 4), shoeMat);
+    toeCap.position.set(side * 0.09, 0.015, 0.095);
+    toeCap.scale.set(1, 0.6, 0.7);
+    group.add(toeCap);
+  }
 
-  // Legs (Left & Right - cylinder based)
-  const legGeo = new THREE.CylinderGeometry(0.055, 0.05, 0.35, 6);
-  const leftLeg = new THREE.Mesh(legGeo, pantsMat);
-  leftLeg.position.set(-0.09, 0.175, 0);
-  leftLeg.castShadow = true;
-  group.add(leftLeg);
-
-  const rightLeg = leftLeg.clone();
-  rightLeg.position.x = 0.09;
-  group.add(rightLeg);
-
-  // Shoes (Rounded black boxes)
-  const shoeGeo = new THREE.BoxGeometry(0.10, 0.06, 0.18);
-  const leftShoe = new THREE.Mesh(shoeGeo, shoeMat);
-  leftShoe.position.set(-0.09, 0.03, 0.02);
-  leftShoe.castShadow = true;
-  group.add(leftShoe);
-  
-  // Shoe toe detail
-  const toeMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.7 });
-  const toeGeo = new THREE.SphereGeometry(0.035, 4, 4);
-  const leftToe = new THREE.Mesh(toeGeo, toeMat);
-  leftToe.position.set(-0.09, 0.025, 0.09);
-  leftToe.scale.set(1.1, 0.6, 0.7);
-  group.add(leftToe);
-
-  const rightShoe = leftShoe.clone();
-  rightShoe.position.x = 0.09;
-  group.add(rightShoe);
-  
-  const rightToe = leftToe.clone();
-  rightToe.position.x = 0.09;
-  group.add(rightToe);
-
-  // Accessories
+  // === ACCESSORIES ===
   if (accessory === 'hat') {
-    const hatGeo = new THREE.ConeGeometry(0.15, 0.2, 4);
-    const hatMat = new THREE.MeshStandardMaterial({ color: 0xffd700, roughness: 0.2 });
-    const hat = new THREE.Mesh(hatGeo, hatMat);
-    hat.position.y = 1.06;
-    hat.rotation.y = Math.PI / 4;
-    group.add(hat);
+    const hatMat = new THREE.MeshStandardMaterial({ color: 0xffd700, roughness: 0.2, metalness: 0.6 });
+    const hatBase = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.16, 0.02, 8), hatMat);
+    hatBase.position.set(0, headCenter + 0.06, 0);
+    group.add(hatBase);
+    const hatCrown = new THREE.Mesh(new THREE.ConeGeometry(0.10, 0.16, 8), hatMat);
+    hatCrown.position.set(0, headCenter + 0.15, 0);
+    group.add(hatCrown);
   } else if (accessory === 'glasses') {
-    const glassesGroup = new THREE.Group();
-    const frameMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.2 });
-    
-    // Ляв кръг рамка
-    const leftRing = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.07, 0.02), frameMat);
-    leftRing.position.set(-0.06, 0.88, 0.13);
-    glassesGroup.add(leftRing);
-    
-    // Десен кръг рамка
-    const rightRing = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.07, 0.02), frameMat);
-    rightRing.position.set(0.06, 0.88, 0.13);
-    glassesGroup.add(rightRing);
-    
-    // Свързващ мост
-    const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.015, 0.015), frameMat);
-    bridge.position.set(0, 0.89, 0.13);
-    glassesGroup.add(bridge);
-    
-    // Странични дръжки
-    const templeGeo = new THREE.BoxGeometry(0.015, 0.015, 0.16);
-    const leftTemple = new THREE.Mesh(templeGeo, frameMat);
-    leftTemple.position.set(-0.115, 0.88, 0.05);
-    const rightTemple = leftTemple.clone();
-    rightTemple.position.x = 0.115;
-    glassesGroup.add(leftTemple);
-    glassesGroup.add(rightTemple);
-    
-    group.add(glassesGroup);
+    const frameMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.2, metalness: 0.5 });
+    for (let side = -1; side <= 1; side += 2) {
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(0.035, 0.008, 6, 10), frameMat);
+      ring.position.set(side * 0.055, headCenter + 0.015, 0.13);
+      ring.rotation.y = Math.PI / 2;
+      group.add(ring);
+    }
+    const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.01, 0.01), frameMat);
+    bridge.position.set(0, headCenter + 0.02, 0.13);
+    group.add(bridge);
   } else if (accessory === 'horns') {
-    const hornGeo = new THREE.ConeGeometry(0.04, 0.1, 4);
-    const hornMat = new THREE.MeshStandardMaterial({ color: 0xff3333 });
-    const leftHorn = new THREE.Mesh(hornGeo, hornMat);
-    leftHorn.position.set(-0.08, 1.0, 0.06);
-    leftHorn.rotation.set(0.2, 0, -0.4);
-    const rightHorn = leftHorn.clone();
-    rightHorn.position.x = 0.08;
-    rightHorn.rotation.z = 0.4;
-    group.add(leftHorn);
-    group.add(rightHorn);
+    const hornMat = new THREE.MeshStandardMaterial({ color: 0xcc3333, roughness: 0.5 });
+    for (let side = -1; side <= 1; side += 2) {
+      const horn = new THREE.Mesh(new THREE.ConeGeometry(0.035, 0.12, 6), hornMat);
+      horn.position.set(side * 0.07, headCenter + 0.08, 0);
+      horn.rotation.set(0.2, 0, side * 0.3);
+      group.add(horn);
+    }
   }
 
   return group;
@@ -940,7 +1034,7 @@ function initEngine() {
 }
 
 function resetPositions() {
-  player.position.set(2, player.height, 2);
+  player.position.set(0, player.height, 11);
   player.rotation.set(0, 0);
   if (camera) {
     camera.rotation.order = "YXZ";
@@ -2160,7 +2254,7 @@ function updateKoceAI(delta) {
       playSound('alert');
       triggerHeartThump();
       // Нулиране на позицията на играча
-      player.position.set(2, player.height, 2);
+      player.position.set(0, player.height, 11);
       if (camera) {
         camera.position.copy(player.position);
         camera.rotation.order = "YXZ";
