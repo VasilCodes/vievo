@@ -962,7 +962,11 @@ function getRandomPatrolNode() {
 // -------------------------------------------------------------
 // Mouse & Keyboard Event Listeners for controls
 // -------------------------------------------------------------
+let inputsBound = false;
 function setupInputListeners() {
+  if (inputsBound) return;
+  inputsBound = true;
+
   window.addEventListener('keydown', (e) => {
     const key = e.key.toLowerCase();
     if (key === 'w') keys.w = true;
@@ -980,10 +984,8 @@ function setupInputListeners() {
     // Slots 1-4
     if (['1','2','3','4'].includes(key)) {
       const slot = parseInt(key);
-      if (player.inventory[slot - 1]) {
-        player.activeSlot = slot;
-        updateHUD();
-      }
+      player.activeSlot = slot;
+      updateHUD();
     }
   });
 
@@ -1002,7 +1004,7 @@ function setupInputListeners() {
 
   // Mouse move look listener
   window.addEventListener('mousemove', (e) => {
-    if (document.pointerLockElement !== renderer.domElement) return;
+    if (!renderer || document.pointerLockElement !== renderer.domElement) return;
 
     const sensitivity = 0.0022;
     player.rotation.x -= e.movementX * sensitivity;
@@ -1016,10 +1018,25 @@ function setupInputListeners() {
     camera.rotation.x = player.rotation.y;
   });
 
-  renderer.domElement.addEventListener('click', () => {
-    if (gameActive && !player.hiding) {
-      renderer.domElement.requestPointerLock();
-    }
+  const canvas = document.getElementById('gameCanvas');
+  if (canvas) {
+    canvas.addEventListener('click', () => {
+      if (gameActive && !player.hiding && renderer) {
+        renderer.domElement.requestPointerLock();
+      }
+    });
+  }
+
+  // Избор на слот чрез кликане върху HUD
+  document.querySelectorAll('.hotbar-slot').forEach(slot => {
+    slot.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const s = parseInt(slot.dataset.slot);
+      if (s >= 1 && s <= 4) {
+        player.activeSlot = s;
+        updateHUD();
+      }
+    });
   });
 }
 
@@ -1375,16 +1392,22 @@ document.getElementById('btnPlayGame').addEventListener('click', () => {
   document.getElementById('mainMenuOverlay').style.display = 'none';
   document.getElementById('hud').classList.add('active');
   
+  if (animationFrameId) {
+    cancelAnimationFrame(animationFrameId);
+  }
+  
   gameActive = true;
   gameTime = 0;
   clock.getDelta(); // reset clock
   initEngine();
+  gameLoop();
   
   // Lock screen
   if (renderer && renderer.domElement) {
     renderer.domElement.requestPointerLock();
   }
   
+  clearInterval(timerInterval);
   timerInterval = setInterval(() => {
     gameTime += 0.1;
   }, 100);
@@ -1443,11 +1466,21 @@ window.restartLevel = () => {
   document.getElementById('gameOverOverlay').style.display = 'none';
   document.getElementById('victoryOverlay').style.display = 'none';
   document.getElementById('hud').classList.add('active');
-  renderer.domElement.requestPointerLock();
+  
+  if (animationFrameId) {
+    cancelAnimationFrame(animationFrameId);
+  }
   
   gameActive = true;
   gameTime = 0;
   resetPositions();
+  gameLoop();
+  
+  if (renderer && renderer.domElement) {
+    renderer.domElement.requestPointerLock();
+  }
+  
+  clearInterval(timerInterval);
   timerInterval = setInterval(() => {
     gameTime += 0.1;
   }, 100);
