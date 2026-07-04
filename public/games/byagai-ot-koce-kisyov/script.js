@@ -1,4 +1,4 @@
-// 3D Game "Бягай от Коце Кисьов" using Three.js & Firebase
+﻿// 3D Game "Бягай от Коце Кисьов" using Three.js & Firebase
 let scene, camera, renderer;
 let gameActive = false;
 let gameTime = 0, timerInterval;
@@ -661,42 +661,63 @@ function createCharacterModel(shirtColorHex, accessory = 'none', pantsColorHex =
   const pantsMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(pantsColorHex), roughness: 0.7 });
   const shoeMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.8 }); // black shoes
   
-  // Body (Box)
-  const bodyGeo = new THREE.BoxGeometry(0.35, 0.55, 0.2);
+  // Body (rounded box-like, with shoulders)
+  const bodyGeo = new THREE.BoxGeometry(0.38, 0.5, 0.2);
   const body = new THREE.Mesh(bodyGeo, shirtMat);
   body.position.y = 0.45;
   body.castShadow = true;
   body.receiveShadow = true;
   group.add(body);
+  
+  // Рамене (малки сфери отстрани)
+  const shoulderMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(shirtColorHex), roughness: 0.5 });
+  for (let side = -1; side <= 1; side += 2) {
+    const shoulderGeo = new THREE.SphereGeometry(0.07, 6, 6);
+    const shoulder = new THREE.Mesh(shoulderGeo, shoulderMat);
+    shoulder.position.set(side * 0.2, 0.68, 0);
+    shoulder.scale.set(1, 0.7, 0.8);
+    group.add(shoulder);
+  }
 
-  // Neck (small flesh box on top of body)
-  const neckGeo = new THREE.BoxGeometry(0.1, 0.06, 0.1);
+  // Neck (small flesh cylinder)
+  const neckGeo = new THREE.CylinderGeometry(0.06, 0.08, 0.06, 6);
   const neck = new THREE.Mesh(neckGeo, skinMat);
   neck.position.set(0, 0.73, 0);
   group.add(neck);
 
-  // Head (Box)
-  const headGeo = new THREE.BoxGeometry(0.24, 0.24, 0.24);
+  // Head (Sphere for smooth look)
+  const headGeo = new THREE.SphereGeometry(0.12, 10, 8);
   const head = new THREE.Mesh(headGeo, skinMat);
   head.position.y = 0.85;
+  head.scale.set(1, 1.1, 0.9);
   head.castShadow = true;
   group.add(head);
 
-  // Eyes (Two small boxes on the front face of head)
-  const eyeGeo = new THREE.BoxGeometry(0.03, 0.03, 0.01);
-  const eyeMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
-  const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
-  leftEye.position.set(-0.06, 0.88, 0.125);
-  const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
-  rightEye.position.set(0.06, 0.88, 0.125);
-  group.add(leftEye);
-  group.add(rightEye);
+  // Eyes (Two small white spheres with black pupils)
+  const whiteMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  const pupilMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+  
+  const eyeGeo = new THREE.SphereGeometry(0.025, 6, 6);
+  const leftWhite = new THREE.Mesh(eyeGeo, whiteMat);
+  leftWhite.position.set(-0.06, 0.88, 0.11);
+  group.add(leftWhite);
+  const rightWhite = leftWhite.clone();
+  rightWhite.position.x = 0.06;
+  group.add(rightWhite);
+  
+  const pupilGeo = new THREE.SphereGeometry(0.012, 6, 6);
+  const leftPupil = new THREE.Mesh(pupilGeo, pupilMat);
+  leftPupil.position.set(-0.06, 0.88, 0.13);
+  group.add(leftPupil);
+  const rightPupil = leftPupil.clone();
+  rightPupil.position.x = 0.06;
+  group.add(rightPupil);
 
-  // Mouth (Small red box)
-  const mouthGeo = new THREE.BoxGeometry(0.06, 0.02, 0.01);
+  // Mouth (Small curved red box)
+  const mouthGeo = new THREE.BoxGeometry(0.06, 0.015, 0.01);
   const mouthMat = new THREE.MeshBasicMaterial({ color: 0xe63946 });
   const mouth = new THREE.Mesh(mouthGeo, mouthMat);
-  mouth.position.set(0, 0.79, 0.125);
+  mouth.position.set(0, 0.79, 0.12);
   group.add(mouth);
 
   // Hair Styles
@@ -707,62 +728,81 @@ function createCharacterModel(shirtColorHex, accessory = 'none', pantsColorHex =
   if (hairStyle !== 'bald') {
     const hairMat = new THREE.MeshStandardMaterial({ color: hairColor, roughness: 0.8 });
     
-    // Main hair cap
-    const capGeo = new THREE.BoxGeometry(0.26, 0.08, 0.26);
+    // Main hair cap (dome shape)
+    const capGeo = new THREE.SphereGeometry(0.14, 10, 8);
     const cap = new THREE.Mesh(capGeo, hairMat);
-    cap.position.set(0, 0.98, 0);
+    cap.position.set(0, 0.96, 0);
+    cap.scale.set(1, 0.5, 1);
+    cap.castShadow = true;
     group.add(cap);
 
     // Back hair flap
     const backGeo = new THREE.BoxGeometry(0.26, 0.16, 0.06);
     const backFlap = new THREE.Mesh(backGeo, hairMat);
     backFlap.position.set(0, 0.88, -0.1);
+    backFlap.castShadow = true;
     group.add(backFlap);
 
     if (hairStyle === 'black_spiky') {
-      // Add spiky segments
-      const spikeGeo = new THREE.BoxGeometry(0.04, 0.06, 0.04);
-      for (let offset = -0.08; offset <= 0.08; offset += 0.08) {
+      // Add spiky segments (cone shaped)
+      const spikeGeo = new THREE.ConeGeometry(0.025, 0.07, 4);
+      for (let offset = -0.09; offset <= 0.09; offset += 0.06) {
         const spike = new THREE.Mesh(spikeGeo, hairMat);
-        spike.position.set(offset, 1.03, 0.04);
-        spike.rotation.z = offset * -2;
+        spike.position.set(offset, 1.04, 0.03);
+        spike.rotation.z = offset * -1.5;
+        spike.castShadow = true;
         group.add(spike);
       }
     } else if (hairStyle === 'blonde_long') {
-      // Add side cascades hanging down
-      const sideGeo = new THREE.BoxGeometry(0.04, 0.3, 0.24);
+      // Add side cascades hanging down (rounded boxes)
+      const sideGeo = new THREE.BoxGeometry(0.035, 0.3, 0.24);
       const leftSide = new THREE.Mesh(sideGeo, hairMat);
-      leftSide.position.set(-0.13, 0.79, 0.01);
-      const rightSide = leftSide.clone();
-      rightSide.position.x = 0.13;
+      leftSide.position.set(-0.14, 0.79, 0.01);
+      leftSide.rotation.z = 0.08;
+      leftSide.castShadow = true;
       group.add(leftSide);
+      const rightSide = leftSide.clone();
+      rightSide.position.x = 0.14;
+      rightSide.rotation.z = -0.08;
       group.add(rightSide);
+    } else {
+      // Short brown hair - add side tufts
+      const tuftGeo = new THREE.BoxGeometry(0.02, 0.04, 0.06);
+      for (let tx = -0.08; tx <= 0.08; tx += 0.08) {
+        const tuft = new THREE.Mesh(tuftGeo, hairMat);
+        tuft.position.set(tx, 1.01, 0.08);
+        tuft.rotation.x = 0.3;
+        group.add(tuft);
+      }
     }
   }
 
-  // Arms (Left & Right)
-  const armGeo = new THREE.BoxGeometry(0.08, 0.45, 0.08);
+  // Arms (Left & Right - cylinder based)
+  const armGeo = new THREE.CylinderGeometry(0.035, 0.03, 0.45, 6);
   const leftArm = new THREE.Mesh(armGeo, shirtMat);
   leftArm.position.set(-0.22, 0.45, 0);
+  leftArm.rotation.z = 0.15;
   leftArm.castShadow = true;
+  group.add(leftArm);
   
-  // Hand (skin colored end of arm)
-  const handGeo = new THREE.BoxGeometry(0.08, 0.08, 0.08);
-  const leftHand = new THREE.Mesh(handGeo, skinMat);
-  leftHand.position.set(-0.22, 0.2, 0);
-  group.add(leftHand);
-
   const rightArm = leftArm.clone();
   rightArm.position.x = 0.22;
-  const rightHand = leftHand.clone();
-  rightHand.position.x = 0.22;
-
-  group.add(leftArm);
+  rightArm.rotation.z = -0.15;
   group.add(rightArm);
+  
+  // Hands (skin colored small spheres)
+  const handGeo = new THREE.SphereGeometry(0.035, 6, 6);
+  const leftHand = new THREE.Mesh(handGeo, skinMat);
+  leftHand.position.set(-0.24, 0.2, 0);
+  leftHand.scale.set(1, 0.8, 1);
+  group.add(leftHand);
+
+  const rightHand = leftHand.clone();
+  rightHand.position.x = 0.24;
   group.add(rightHand);
 
-  // Legs (Left & Right)
-  const legGeo = new THREE.BoxGeometry(0.12, 0.35, 0.12);
+  // Legs (Left & Right - cylinder based)
+  const legGeo = new THREE.CylinderGeometry(0.055, 0.05, 0.35, 6);
   const leftLeg = new THREE.Mesh(legGeo, pantsMat);
   leftLeg.position.set(-0.09, 0.175, 0);
   leftLeg.castShadow = true;
@@ -772,16 +812,28 @@ function createCharacterModel(shirtColorHex, accessory = 'none', pantsColorHex =
   rightLeg.position.x = 0.09;
   group.add(rightLeg);
 
-  // Shoes (Black blocks under legs)
-  const shoeGeo = new THREE.BoxGeometry(0.12, 0.06, 0.16);
+  // Shoes (Rounded black boxes)
+  const shoeGeo = new THREE.BoxGeometry(0.10, 0.06, 0.18);
   const leftShoe = new THREE.Mesh(shoeGeo, shoeMat);
   leftShoe.position.set(-0.09, 0.03, 0.02);
   leftShoe.castShadow = true;
   group.add(leftShoe);
+  
+  // Shoe toe detail
+  const toeMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.7 });
+  const toeGeo = new THREE.SphereGeometry(0.035, 4, 4);
+  const leftToe = new THREE.Mesh(toeGeo, toeMat);
+  leftToe.position.set(-0.09, 0.025, 0.09);
+  leftToe.scale.set(1.1, 0.6, 0.7);
+  group.add(leftToe);
 
   const rightShoe = leftShoe.clone();
   rightShoe.position.x = 0.09;
   group.add(rightShoe);
+  
+  const rightToe = leftToe.clone();
+  rightToe.position.x = 0.09;
+  group.add(rightToe);
 
   // Accessories
   if (accessory === 'hat') {
@@ -924,6 +976,7 @@ function createDetailedBookshelf(x, y, z) {
   group.position.set(x, y, z);
 
   const woodMat = new THREE.MeshStandardMaterial({ color: 0x3d2314, roughness: 0.7 });
+  const darkWoodMat = new THREE.MeshStandardMaterial({ color: 0x2a160a, roughness: 0.8 });
 
   // Заден панел на секцията
   const backGeo = new THREE.BoxGeometry(3.8, 2.0, 0.1);
@@ -934,7 +987,7 @@ function createDetailedBookshelf(x, y, z) {
 
   // Странични колони на секцията
   const sideGeo = new THREE.BoxGeometry(0.1, 2.0, 0.8);
-  const leftSide = new THREE.Mesh(sideGeo, woodMat);
+  const leftSide = new THREE.Mesh(sideGeo, darkWoodMat);
   leftSide.position.x = -1.9;
   leftSide.castShadow = true;
   const rightSide = leftSide.clone();
@@ -942,16 +995,36 @@ function createDetailedBookshelf(x, y, z) {
   group.add(leftSide);
   group.add(rightSide);
 
+  // Долен цокъл
+  const baseGeo = new THREE.BoxGeometry(3.9, 0.08, 0.8);
+  const base = new THREE.Mesh(baseGeo, darkWoodMat);
+  base.position.y = -0.96;
+  base.castShadow = true;
+  group.add(base);
+  
+  // Преден долен ръб
+  const baseTrimGeo = new THREE.BoxGeometry(3.9, 0.03, 0.06);
+  const baseTrim = new THREE.Mesh(baseTrimGeo, darkWoodMat);
+  baseTrim.position.set(0, -0.92, 0.35);
+  group.add(baseTrim);
+
   // Горен панел на секцията
-  const topGeo = new THREE.BoxGeometry(3.9, 0.08, 0.8);
-  const top = new THREE.Mesh(topGeo, woodMat);
+  const topGeo = new THREE.BoxGeometry(3.9, 0.08, 0.85);
+  const top = new THREE.Mesh(topGeo, darkWoodMat);
   top.position.y = 1.0;
   top.castShadow = true;
   group.add(top);
+  
+  // Горен корниз (декоративна лайстна)
+  const crownGeo = new THREE.BoxGeometry(4.0, 0.04, 0.9);
+  const crown = new THREE.Mesh(crownGeo, darkWoodMat);
+  crown.position.y = 1.06;
+  crown.castShadow = true;
+  group.add(crown);
 
   // Рафтове (3 нива: -0.5, 0.0, 0.5)
   const shelfGeo = new THREE.BoxGeometry(3.7, 0.04, 0.75);
-  const bookColors = [0xe63946, 0x457b9d, 0x1d3557, 0xe9c46a, 0x2a9d8f, 0xf4a261];
+  const bookColors = [0xe63946, 0x457b9d, 0x1d3557, 0xe9c46a, 0x2a9d8f, 0xf4a261, 0x9c27b0, 0xff6f00];
   
   for (let lvl = -0.5; lvl <= 0.5; lvl += 0.5) {
     const shelf = new THREE.Mesh(shelfGeo, woodMat);
@@ -960,23 +1033,36 @@ function createDetailedBookshelf(x, y, z) {
     group.add(shelf);
 
     // Добавяне на книги върху всеки рафт
-    for (let bx = -1.7; bx <= 1.7; bx += 0.25) {
-      if (Math.random() < 0.2) continue; // Направи дупки за реализъм
+    for (let bx = -1.7; bx <= 1.7; bx += 0.22) {
+      if (Math.random() < 0.25) continue; // Направи дупки за реализъм
       
-      const bookHeight = 0.22 + Math.random() * 0.15;
-      const bookWidth = 0.04 + Math.random() * 0.05;
+      const bookHeight = 0.18 + Math.random() * 0.2;
+      const bookWidth = 0.04 + Math.random() * 0.06;
       const bookDepth = 0.35 + Math.random() * 0.18;
+      const tilt = (Math.random() - 0.5) * 0.06;
       
+      const color = bookColors[Math.floor(Math.random() * bookColors.length)];
       const bookMat = new THREE.MeshStandardMaterial({
-        color: bookColors[Math.floor(Math.random() * bookColors.length)],
-        roughness: 0.6
+        color: color,
+        roughness: 0.5 + Math.random() * 0.3
       });
       
       const bookGeo = new THREE.BoxGeometry(bookWidth, bookHeight, bookDepth);
       const book = new THREE.Mesh(bookGeo, bookMat);
       book.position.set(bx, lvl + 0.02 + bookHeight / 2, 0);
+      book.rotation.z = tilt;
       book.castShadow = true;
       group.add(book);
+      
+      // Гръб на книгата (тънка лента отпред)
+      if (Math.random() < 0.4) {
+        const spineMat = new THREE.MeshStandardMaterial({ color: 0xdddddd, roughness: 0.3 });
+        const spineGeo = new THREE.BoxGeometry(bookWidth * 0.8, bookHeight * 0.6, 0.01);
+        const spine = new THREE.Mesh(spineGeo, spineMat);
+        spine.position.set(bx, lvl + 0.02 + bookHeight / 2, bookDepth / 2 + 0.005);
+        spine.rotation.z = tilt;
+        group.add(spine);
+      }
     }
   }
 
@@ -1085,21 +1171,59 @@ function buildLevel(level) {
     scene.add(fenceGroup);
 
     // Стълби до втория етаж (от земята до ръба на балкона z=1)
+    const stairMat = new THREE.MeshStandardMaterial({ color: 0x6d4c41, roughness: 0.7 });
+    const stairSideMat = new THREE.MeshStandardMaterial({ color: 0x4e342e, roughness: 0.8 });
+    
     for (let i = 0; i < 11; i++) {
       const stepGeo = new THREE.BoxGeometry(2.5, 0.23, 0.45);
-      const step = new THREE.Mesh(stepGeo, balconyMat);
+      const step = new THREE.Mesh(stepGeo, stairMat);
       step.position.set(-5, 0.115 + i * 0.23, -3.5 + i * 0.45);
       step.receiveShadow = true;
       step.castShadow = true;
       scene.add(step);
       levelMap.push(step);
+      
+      // Нос на стъпалото (издадена предна част)
+      if (i < 10) {
+        const nosingGeo = new THREE.BoxGeometry(2.5, 0.03, 0.06);
+        const nosing = new THREE.Mesh(nosingGeo, stairSideMat);
+        nosing.position.set(-5, 0.115 + i * 0.23 + 0.115, -3.5 + i * 0.45 + 0.255);
+        nosing.castShadow = true;
+        scene.add(nosing);
+      }
     }
 
-    // Диагонален парапет за стълбите
-    const stairsRailing = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 5.5), balconyMat);
-    stairsRailing.position.set(-3.7, 1.8, -2.0);
-    stairsRailing.rotation.x = 0.6;
-    scene.add(stairsRailing);
+    // Странични тетиви (наклонени греди)
+    for (let side = -1; side <= 1; side += 2) {
+      const stringerGeo = new THREE.BoxGeometry(0.08, 2.6, 5.2);
+      const stringer = new THREE.Mesh(stringerGeo, stairSideMat);
+      stringer.position.set(-5 + side * 1.3, 1.3, -1.25);
+      stringer.rotation.x = 0.46;
+      stringer.castShadow = true;
+      scene.add(stringer);
+    }
+
+    // Перила с балюстради
+    const railMat = new THREE.MeshStandardMaterial({ color: 0x3d2314, roughness: 0.6 });
+    // Горна ръкохватка
+    const handrailGeo = new THREE.BoxGeometry(0.06, 0.06, 5.2);
+    const handrail = new THREE.Mesh(handrailGeo, railMat);
+    handrail.position.set(-3.8, 2.4, -1.25);
+    handrail.rotation.x = 0.46;
+    handrail.castShadow = true;
+    scene.add(handrail);
+    
+    // Балюстради (вертикални пръчки)
+    for (let bi = 0; bi < 10; bi++) {
+      const balusterGeo = new THREE.BoxGeometry(0.03, 0.6, 0.03);
+      const baluster = new THREE.Mesh(balusterGeo, railMat);
+      const t = (bi + 0.5) / 10;
+      const bz = -3.5 + t * 4.5;
+      const by = 0.115 + t * 2.3;
+      baluster.position.set(-3.8, by + 0.7, bz);
+      baluster.castShadow = true;
+      scene.add(baluster);
+    }
 
     // Точково локално осветление за първия етаж
     const bulbGeo = new THREE.SphereGeometry(0.1, 8, 8);
@@ -1167,36 +1291,62 @@ function buildLevel(level) {
     scene.add(tableCollider);
     levelMap.push(tableCollider);
 
-    // Супер детайлен 3D модел на фенерчето (състоящ се от дръжка, глава, стъкло и бутон)
+    // Подобрен 3D модел на фенерче (цилиндрична дръжка, конусна глава, леща, релефен грип, кламер)
     const flashlightMesh = new THREE.Group();
     
-    // Дръжка
-    const handleGeo = new THREE.CylinderGeometry(0.02, 0.02, 0.16, 8);
-    const handleMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.5 });
+    // Дръжка (цилиндър на сегменти за по-гладка визия)
+    const handleGeo = new THREE.CylinderGeometry(0.025, 0.023, 0.18, 12);
+    const handleMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.6 });
     const handle = new THREE.Mesh(handleGeo, handleMat);
     handle.rotation.x = Math.PI / 2;
     flashlightMesh.add(handle);
+    
+    // Релефен грип (пръстени около дръжката)
+    const gripMat = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.9 });
+    for (let gi = -0.06; gi <= 0.06; gi += 0.03) {
+      const gripGeo = new THREE.TorusGeometry(0.026, 0.003, 6, 12);
+      const grip = new THREE.Mesh(gripGeo, gripMat);
+      grip.position.set(0, 0, gi);
+      grip.rotation.y = Math.PI / 2;
+      flashlightMesh.add(grip);
+    }
+    
+    // Pre-задна капачка
+    const capGeo = new THREE.CylinderGeometry(0.022, 0.028, 0.02, 12);
+    const capMat = new THREE.MeshStandardMaterial({ color: 0x444444, metalness: 0.5, roughness: 0.4 });
+    const cap = new THREE.Mesh(capGeo, capMat);
+    cap.position.z = -0.09;
+    cap.rotation.x = Math.PI / 2;
+    flashlightMesh.add(cap);
 
-    // Сребърна глава
-    const headGeo = new THREE.CylinderGeometry(0.035, 0.025, 0.06, 8);
-    const headMat = new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness: 0.8, roughness: 0.2 });
+    // Сребърна глава (конусна)
+    const headGeo = new THREE.CylinderGeometry(0.045, 0.025, 0.07, 12);
+    const headMat = new THREE.MeshStandardMaterial({ color: 0xaaaaaa, metalness: 0.8, roughness: 0.2 });
     const head = new THREE.Mesh(headGeo, headMat);
-    head.position.z = 0.1;
+    head.position.z = 0.12;
     head.rotation.x = Math.PI / 2;
     flashlightMesh.add(head);
 
     // Светещо жълто стъкло (леща) на върха
-    const lensGeo = new THREE.SphereGeometry(0.025, 8, 8);
+    const lensGeo = new THREE.SphereGeometry(0.035, 10, 8);
     const lensMat = new THREE.MeshBasicMaterial({ color: 0xffeb3b });
     const lens = new THREE.Mesh(lensGeo, lensMat);
-    lens.position.z = 0.13;
+    lens.position.z = 0.16;
     flashlightMesh.add(lens);
+    
+    // Външен пръстен около лещата
+    const rimGeo = new THREE.TorusGeometry(0.038, 0.005, 6, 12);
+    const rimMat = new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.7, roughness: 0.3 });
+    const rim = new THREE.Mesh(rimGeo, rimMat);
+    rim.position.z = 0.155;
+    rim.rotation.y = Math.PI / 2;
+    flashlightMesh.add(rim);
 
-    // Червено копче за включване
-    const switchGeo = new THREE.BoxGeometry(0.008, 0.008, 0.015);
-    const switchMat = new THREE.MeshBasicMaterial({ color: 0xff3333 });
+    // Червено копче за включване (по-голямо и видимо)
+    const switchGeo = new THREE.BoxGeometry(0.012, 0.006, 0.02);
+    const switchMat = new THREE.MeshStandardMaterial({ color: 0xcc2222, roughness: 0.5 });
     const sw = new THREE.Mesh(switchGeo, switchMat);
-    sw.position.set(0, 0.022, 0);
+    sw.position.set(0, 0.028, 0.02);
     flashlightMesh.add(sw);
 
     flashlightMesh.position.set(0, 0.85, 4);
@@ -1211,12 +1361,56 @@ function buildLevel(level) {
       radius: 0.6
     });
 
-    // Изходна врата
-    const doorGeo = new THREE.BoxGeometry(1.2, 2.2, 0.15);
-    const doorMat = new THREE.MeshStandardMaterial({ color: 0x5e2c04 });
+    // Изходна врата с каса и дръжка
+    const doorGroup = new THREE.Group();
+    doorGroup.position.set(0, 0, -14.8);
+    
+    // Врата (дървена)
+    const doorMat = new THREE.MeshStandardMaterial({ color: 0x5e2c04, roughness: 0.7 });
+    const doorGeo = new THREE.BoxGeometry(1.2, 2.2, 0.12);
     const doorMesh = new THREE.Mesh(doorGeo, doorMat);
-    doorMesh.position.set(0, 1.1, -14.8);
-    scene.add(doorMesh);
+    doorMesh.position.y = 1.1;
+    doorMesh.castShadow = true;
+    doorGroup.add(doorMesh);
+    
+    // Каса (рамка на вратата)
+    const frameMat = new THREE.MeshStandardMaterial({ color: 0x3d2314, roughness: 0.8 });
+    const frameGeo = new THREE.BoxGeometry(0.06, 1.2, 0.06);
+    // Горе
+    const topFrame = new THREE.Mesh(new THREE.BoxGeometry(1.32, 0.06, 0.12), frameMat);
+    topFrame.position.set(0, 2.23, 0);
+    doorGroup.add(topFrame);
+    // Ляво
+    const leftFrame = new THREE.Mesh(frameGeo, frameMat);
+    leftFrame.position.set(-0.66, 1.1, 0);
+    doorGroup.add(leftFrame);
+    // Дясно
+    const rightFrame = leftFrame.clone();
+    rightFrame.position.x = 0.66;
+    doorGroup.add(rightFrame);
+    
+    // Дръжка на вратата
+    const doorHandleMat = new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness: 0.8, roughness: 0.2 });
+    const handleBase = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.02, 0.04, 6), doorHandleMat);
+    handleBase.position.set(0.35, 1.0, 0.08);
+    handleBase.rotation.x = Math.PI / 2;
+    doorGroup.add(handleBase);
+    const handleBar = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.08, 6), doorHandleMat);
+    handleBar.position.set(0.39, 1.0, 0.05);
+    handleBar.rotation.z = Math.PI / 2;
+    doorGroup.add(handleBar);
+    
+    // Панели на вратата (декоративни вдлъбнатини)
+    const panelMat = new THREE.MeshStandardMaterial({ color: 0x4a2210, roughness: 0.8 });
+    const panelGeo = new THREE.BoxGeometry(0.8, 0.6, 0.02);
+    const panel1 = new THREE.Mesh(panelGeo, panelMat);
+    panel1.position.set(0, 1.5, 0.07);
+    doorGroup.add(panel1);
+    const panel2 = panel1.clone();
+    panel2.position.y = 0.7;
+    doorGroup.add(panel2);
+    
+    scene.add(doorGroup);
     interactiveObjects.push({
       type: 'exit_door',
       mesh: doorMesh,
@@ -1224,30 +1418,51 @@ function buildLevel(level) {
       radius: 1.5
     });
 
-    // Изходен ключ (на втория етаж в тъмното) - красив 3D модел на ключ
+    // Подобрен 3D модел на златен ключ (пръстен, стебло с канал, две зъбчета)
     const keyMesh = new THREE.Group();
     const goldMat = new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.8, roughness: 0.15 });
 
-    // Кръгла глава на ключа
-    const ringGeo = new THREE.CylinderGeometry(0.04, 0.04, 0.015, 12);
+    // Кръгла глава (пръстен - торус)
+    const ringGeo = new THREE.TorusGeometry(0.035, 0.01, 8, 12);
     const ring = new THREE.Mesh(ringGeo, goldMat);
-    ring.rotation.x = Math.PI / 2;
+    ring.rotation.y = Math.PI / 2;
     keyMesh.add(ring);
 
-    // Основно стебло на ключа
-    const shaftGeo = new THREE.CylinderGeometry(0.01, 0.01, 0.12, 8);
+    // Основно стебло на ключа (правоъгълно сечение, по-реалистично)
+    const shaftGeo = new THREE.BoxGeometry(0.018, 0.004, 0.11);
     const shaft = new THREE.Mesh(shaftGeo, goldMat);
-    shaft.position.z = -0.06;
-    shaft.rotation.x = Math.PI / 2;
+    shaft.position.set(0, 0, -0.065);
     keyMesh.add(shaft);
 
-    // Зъбчета на ключа
-    const tooth1 = new THREE.Mesh(new THREE.BoxGeometry(0.01, 0.02, 0.01), goldMat);
-    tooth1.position.set(0, -0.015, -0.11);
-    const tooth2 = new THREE.Mesh(new THREE.BoxGeometry(0.01, 0.012, 0.01), goldMat);
-    tooth2.position.set(0, -0.011, -0.09);
+    // Канал (прорез) по стеблото
+    const grooveMat = new THREE.MeshStandardMaterial({ color: 0x996600, roughness: 0.5 });
+    const grooveGeo = new THREE.BoxGeometry(0.004, 0.005, 0.04);
+    const groove = new THREE.Mesh(grooveGeo, grooveMat);
+    groove.position.set(0, 0, -0.05);
+    keyMesh.add(groove);
+
+    // Зъбче 1 (по-голямо)
+    const tooth1Geo = new THREE.BoxGeometry(0.01, 0.025, 0.008);
+    const tooth1 = new THREE.Mesh(tooth1Geo, goldMat);
+    tooth1.position.set(0.009, -0.0145, -0.105);
     keyMesh.add(tooth1);
+    
+    // Зъбче 2 (по-малко, с отместване)
+    const tooth2Geo = new THREE.BoxGeometry(0.01, 0.015, 0.008);
+    const tooth2 = new THREE.Mesh(tooth2Geo, goldMat);
+    tooth2.position.set(0.009, -0.0095, -0.085);
     keyMesh.add(tooth2);
+
+    // Върховете на зъбчетата (леко заобляне)
+    const tipMat = new THREE.MeshStandardMaterial({ color: 0xcca300, metalness: 0.6, roughness: 0.3 });
+    const tipGeo = new THREE.SphereGeometry(0.005, 4, 4);
+    const tip1 = new THREE.Mesh(tipGeo, tipMat);
+    tip1.position.set(0.014, -0.0145, -0.105);
+    tip1.scale.set(1, 0.3, 1);
+    keyMesh.add(tip1);
+    const tip2 = tip1.clone();
+    tip2.position.set(0.014, -0.0095, -0.085);
+    keyMesh.add(tip2);
 
     keyMesh.position.set(4, 2.65, -10);
     scene.add(keyMesh);
@@ -1261,126 +1476,26 @@ function buildLevel(level) {
       radius: 0.6
     });
 
-  } else if (level === 2) {
-    // Corridor barricades and lockers
-    const lockerGeo = new THREE.BoxGeometry(0.8, 2.2, 0.6);
-    const lockerMat = new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.7 });
-    
-    // Generate hideable lockers along left wall
-    for (let z = -12; z <= 12; z += 4) {
-      const locker = new THREE.Mesh(lockerGeo, lockerMat);
-      locker.position.set(-14.4, 1.1, z);
-      locker.castShadow = true;
-      scene.add(locker);
-      interactiveObjects.push({
-        type: 'locker',
-        mesh: locker,
-        radius: 1.0
-      });
-    }
-
-    // Рафтове по десната стена на коридора
-    createDetailedBookshelf(14, 1.0, -8);
-    createDetailedBookshelf(14, 1.0, 0);
-    createDetailedBookshelf(14, 1.0, 8);
-    // Малък рафт до баракадата
-    createDetailedBookshelf(1, 1.0, 5);
-
-    // Barricade blocking path
-    const deskGeo = new THREE.BoxGeometry(3, 1.2, 1.5);
-    const desk = new THREE.Mesh(deskGeo, wallMat);
-    desk.position.set(4, 0.6, 2);
-    scene.add(desk);
-    levelMap.push(desk);
-
-    // Key Item inside drawer
-    const keyGeo = new THREE.BoxGeometry(0.05, 0.02, 0.12);
-    const keyMat = new THREE.MeshStandardMaterial({ color: 0xffd700 });
-    const keyMesh = new THREE.Mesh(keyGeo, keyMat);
-    keyMesh.position.set(4, 1.25, 2.1);
-    scene.add(keyMesh);
-    interactiveObjects.push({
-      type: 'item',
-      name: 'Изходен ключ',
-      itemId: 'door_key',
-      icon: 'fa-key',
-      mesh: keyMesh,
-      radius: 0.4
-    });
-
-    // Exit Door
-    const doorGeo = new THREE.BoxGeometry(1.2, 2.2, 0.15);
-    const doorMat = new THREE.MeshStandardMaterial({ color: 0x5e2c04 });
-    const doorMesh = new THREE.Mesh(doorGeo, doorMat);
-    doorMesh.position.set(14.8, 1.1, 0);
-    doorMesh.rotation.y = Math.PI / 2;
-    scene.add(doorMesh);
-    interactiveObjects.push({
-      type: 'exit_door',
-      mesh: doorMesh,
-      locked: true,
-      radius: 1.5
-    });
-  } else {
-    // Cafeteria Tables
-    const tableGeo = new THREE.BoxGeometry(3, 0.9, 1.5);
-    const tableMat = new THREE.MeshStandardMaterial({ color: 0xd1d5db });
-    for (let x = -8; x <= 8; x += 6) {
-      for (let z = -6; z <= 6; z += 6) {
-        const table = new THREE.Mesh(tableGeo, tableMat);
-        table.position.set(x, 0.45, z);
-        table.castShadow = true;
-        table.receiveShadow = true;
-        scene.add(table);
-        levelMap.push(table);
-      }
-    }
-
-    // Fridge Door
-    const fridgeDoor = new THREE.Mesh(new THREE.BoxGeometry(1.5, 2.5, 0.2), new THREE.MeshStandardMaterial({ color: 0xc4b5fd }));
-    fridgeDoor.position.set(-14.8, 1.25, 0);
-    fridgeDoor.rotation.y = Math.PI / 2;
-    scene.add(fridgeDoor);
-    interactiveObjects.push({
-      type: 'exit_door',
-      mesh: fridgeDoor,
-      locked: true,
-      radius: 1.5
-    });
-
-    // Рафтове в столовата (ъгли и по стените)
-    createDetailedBookshelf(-12, 1.0, -10);
-    createDetailedBookshelf(-12, 1.0, 10);
-    createDetailedBookshelf(12, 1.0, -10);
-    createDetailedBookshelf(12, 1.0, 10);
-    createDetailedBookshelf(-3, 1.0, -12);
-    createDetailedBookshelf(3, 1.0, -12);
-
-    // Color key (преместен под един от рафтовете)
-    const keyMesh = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.02, 0.12), new THREE.MeshStandardMaterial({ color: 0x8b5cf6 }));
-    keyMesh.position.set(8, 0.1, 8);
-    scene.add(keyMesh);
-    interactiveObjects.push({
-      type: 'item',
-      name: 'Хладилен Ключ',
-      itemId: 'door_key',
-      icon: 'fa-key',
-      mesh: keyMesh,
-      radius: 0.4
-    });
   }
+
+  // Additional bookshelves scattered around the level
+  createDetailedBookshelf(-3, 1.0, 2);
+  createDetailedBookshelf(3, 1.0, 2);
+  createDetailedBookshelf(-6, 1.0, 0);
+  createDetailedBookshelf(6, 1.0, 0);
+  createDetailedBookshelf(0, 1.0, -2);
 }
 
 function getRandomPatrolNode() {
   const nodes = [
-    new THREE.Vector3(10, 0, 10),
-    new THREE.Vector3(-10, 0, 10),
-    new THREE.Vector3(-10, 0, -10),
-    new THREE.Vector3(10, 0, -10),
-    new THREE.Vector3(0, 0, 8),
-    new THREE.Vector3(0, 0, -8),
-    new THREE.Vector3(12, 0, 0),
-    new THREE.Vector3(-12, 0, 0)
+    new THREE.Vector3(10, 0, 10), new THREE.Vector3(-10, 0, 10),
+    new THREE.Vector3(-10, 0, -10), new THREE.Vector3(10, 0, -10),
+    new THREE.Vector3(0, 0, 12), new THREE.Vector3(0, 0, -12),
+    new THREE.Vector3(12, 0, 0), new THREE.Vector3(-12, 0, 0),
+    new THREE.Vector3(-5, 0, 8), new THREE.Vector3(5, 0, 8),
+    new THREE.Vector3(-5, 0, -8), new THREE.Vector3(5, 0, -8),
+    new THREE.Vector3(8, 0, 4), new THREE.Vector3(-8, 0, 4),
+    new THREE.Vector3(8, 0, -4), new THREE.Vector3(-8, 0, -4)
   ];
   return nodes[Math.floor(Math.random() * nodes.length)];
 }
@@ -1417,6 +1532,7 @@ function setupInputListeners() {
     
     // Slots 1-4
     if (['1','2','3','4'].includes(key)) {
+      e.preventDefault();
       const slot = parseInt(key);
       player.activeSlot = slot;
       updateHUD();
@@ -1721,9 +1837,17 @@ function handlePlayerMovement(delta) {
     
     // Balcony landing check
     if (player.position.x >= -8 && player.position.x <= 8 && player.position.z >= -15 && player.position.z <= 1) {
-      const balconyHeight = 2.5 + player.height;
-      if (player.position.y >= balconyHeight - 0.2 && player.velocity.y <= 0) {
-        standY = balconyHeight;
+      if (player.position.y >= 2.5 + player.height - 0.2 && player.velocity.y <= 0) {
+        standY = 2.5 + player.height;
+      }
+    }
+
+    // Stair landing check (catch player falling onto stairs)
+    if (player.position.x >= -6.5 && player.position.x <= -3.5 && player.position.z >= -4.0 && player.position.z <= 1.5 && player.position.y < 2.5 + player.height) {
+      const t = Math.max(0, Math.min(1, (player.position.z + 3.5) / 4.5));
+      const stairHeight = 0.115 + t * 2.3;
+      if (player.position.y >= stairHeight + player.height - 0.2 && player.velocity.y <= 0) {
+        standY = Math.max(standY, stairHeight + player.height);
       }
     }
 
@@ -1735,12 +1859,11 @@ function handlePlayerMovement(delta) {
   } else {
     // Grounded height checks
     let expectedY = player.height;
-    if (player.position.y > 2.0 && player.position.x >= -8 && player.position.x <= 8 && player.position.z >= -15 && player.position.z <= 1) {
+    const isOnBalcony = player.position.y > 2.0 && player.position.x >= -8 && player.position.x <= 8 && player.position.z >= -15 && player.position.z <= 1;
+    if (isOnBalcony) {
       expectedY = 2.5 + player.height;
-    }
-    
-    // Smooth step climbing on stairs: x = -5, z = -3.5 to 1
-    if (player.position.x >= -6.5 && player.position.x <= -3.5 && player.position.z >= -4.0 && player.position.z <= 1.5) {
+    } else if (player.position.x >= -6.5 && player.position.x <= -3.5 && player.position.z >= -4.0 && player.position.z <= 1.5) {
+      // Smooth step climbing on stairs: x = -5, z = -3.5 to 1
       const t = Math.max(0, Math.min(1, (player.position.z + 3.5) / 4.5));
       const stairHeight = 0.115 + t * 2.3;
       expectedY = stairHeight + player.height;
@@ -1869,6 +1992,7 @@ function updateKoceAI(delta) {
     } else {
       showNotification(`Коце те хвана! Остават ти ${player.hearts} <i class="fas fa-heart-broken"></i>`, 'warn');
       playSound('alert');
+      triggerHeartThump();
       // Нулиране на позицията на играча
       player.position.set(2, player.height, 2);
       if (camera) {
@@ -1931,12 +2055,6 @@ function updateHUD() {
     }
   }
 
-  // Flashlight icon sync in HUD
-  const flashlightIcon = document.getElementById('slotFlashlightIcon');
-  if (player.inventory.some(i => i.id === 'flashlight')) {
-    if (flashlightIcon) flashlightIcon.style.display = 'block';
-  }
-
   // Покажи батерията само когато държим фенера в ръка
   const activeItem = player.inventory[player.activeSlot - 1];
   const batteryBarGroup = document.getElementById('batteryBarGroup');
@@ -1949,6 +2067,7 @@ function updateHUD() {
   }
 
   updateHeartsHUD();
+  updateHeldItemDisplay();
 }
 
 function updateHeartsHUD() {
@@ -1965,6 +2084,27 @@ function updateHeartsHUD() {
       heart.style.color = 'rgba(255, 255, 255, 0.2)';
     }
     container.appendChild(heart);
+  }
+}
+
+function triggerHeartThump() {
+  const el = document.getElementById('heartThumpOverlay');
+  if (!el) return;
+  el.classList.remove('active');
+  void el.offsetWidth;
+  el.classList.add('active');
+  setTimeout(() => el.classList.remove('active'), 700);
+}
+
+function updateHeldItemDisplay() {
+  const el = document.getElementById('heldItemDisplay');
+  if (!el) return;
+  const activeItem = player.inventory[player.activeSlot - 1];
+  if (activeItem && activeItem.id !== 'hand') {
+    el.innerHTML = `<i class="fas ${activeItem.icon}"></i>`;
+    el.classList.add('active');
+  } else {
+    el.classList.remove('active');
   }
 }
 
@@ -2043,52 +2183,20 @@ function checkZoneTrigger(zoneId, title, message, icon) {
 let zoneCheckTimer = 0;
 function updateZoneTriggers(delta) {
   zoneCheckTimer += delta;
-  if (zoneCheckTimer < 2.0) return; // Check every 2 seconds
+  if (zoneCheckTimer < 2.0) return;
   zoneCheckTimer = 0;
   
-  if (currentLevel === 1) {
-    // Балкон зона
-    if (player.position.y > 4.0 && player.position.x >= -8 && player.position.x <= 8 && player.position.z >= -15 && player.position.z <= 1) {
-      checkZoneTrigger('l1_balcony', 'Балкон — 2-ри етаж', 'Внимавай! Коце може да се качи по стълбите и да те открие. Търси ключа сред рафтовете!', 'fa-cloud-moon');
-    }
-    // Стълби зона
-    if (player.position.x >= -6.5 && player.position.x <= -3.5 && player.position.z >= -4.0 && player.position.z <= 1.5) {
-      checkZoneTrigger('l1_stairs', 'Стълби', 'Качваш се на втория етаж. Бъди тих — шумът привлича Коце!', 'fa-arrow-up');
-    }
-    // Ключова зона (близо до ключа)
-    if (player.position.distanceTo(new THREE.Vector3(4, 2.65, -10)) < 5) {
-      checkZoneTrigger('l1_key_area', 'Близо до ключа', 'Някъде тук има ключ за изходната врата. Огледай се внимателно!', 'fa-key');
-    }
-    // Фенерче зона
-    if (player.position.distanceTo(new THREE.Vector3(0, 0.85, 4)) < 5) {
-      checkZoneTrigger('l1_flashlight_area', 'Фенерче', 'Фенерчето е някъде тук на масата. Светлината ще ти помогне в тъмното!', 'fa-flashlight');
-    }
-  } else if (currentLevel === 2) {
-    // Начало на коридора
-    if (player.position.z > -2 && player.position.z < 2 && player.position.x < -10) {
-      checkZoneTrigger('l2_corridor', 'Училищен Коридор', 'Дълъг и тесен коридор. Скрий се в шкафчетата, ако Коце наближи!', 'fa-school');
-    }
-    // Баракада
-    if (player.position.distanceTo(new THREE.Vector3(4, 0.6, 2)) < 5) {
-      checkZoneTrigger('l2_barricade', 'Баракада', 'Проходът е блокиран. Потърси ключ в чекмеджето на бюрото!', 'fa-couch');
-    }
-    // Шкафчета
-    if (player.position.x < -12 && (player.position.z > 8 || player.position.z < -8)) {
-      checkZoneTrigger('l2_lockers', 'Шкафчета', 'Шкафчетата за преобличане са идеални за скриване. Натисни E, за да влезеш!', 'fa-archive');
-    }
-  } else if (currentLevel === 3) {
-    // Столова
-    if (player.position.z > -2 && player.position.z < 2 && player.position.x < 5 && player.position.x > -5) {
-      checkZoneTrigger('l3_cafeteria', 'Трапезария', 'Голяма столова с много маси. Използвай ги за прикритие от Коце!', 'fa-utensils');
-    }
-    // Кухня/Хладилник зона
-    if (player.position.x > 10 || player.position.x < -10) {
-      checkZoneTrigger('l3_kitchen', 'Кухненски бокс', 'Хладилната врата е изходът. Намери лилавия ключ за отключване!', 'fa-snowflake');
-    }
-    // Ключ зона
-    if (player.position.distanceTo(new THREE.Vector3(8, 0.1, 8)) < 5) {
-      checkZoneTrigger('l3_key', 'Хладилен ключ', 'Ключът трябва да е някъде по земята. Свети лилаво!', 'fa-key');
-    }
+  if (player.position.y > 4.0 && player.position.x >= -8 && player.position.x <= 8 && player.position.z >= -15 && player.position.z <= 1) {
+    checkZoneTrigger('l1_balcony', 'Балкон — 2-ри етаж', 'Внимавай! Коце може да се качи по стълбите и да те открие. Търси ключа сред рафтовете!', 'fa-cloud-moon');
+  }
+  if (player.position.x >= -6.5 && player.position.x <= -3.5 && player.position.z >= -4.0 && player.position.z <= 1.5) {
+    checkZoneTrigger('l1_stairs', 'Стълби', 'Качваш се на втория етаж. Бъди тих — шумът привлича Коце!', 'fa-arrow-up');
+  }
+  if (player.position.distanceTo(new THREE.Vector3(4, 2.65, -10)) < 5) {
+    checkZoneTrigger('l1_key_area', 'Близо до ключа', 'Някъде тук има ключ за изходната врата. Огледай се внимателно!', 'fa-key');
+  }
+  if (player.position.distanceTo(new THREE.Vector3(0, 0.85, 4)) < 5) {
+    checkZoneTrigger('l1_flashlight_area', 'Фенерче', 'Фенерчето е някъде тук на масата. Светлината ще ти помогне в тъмното!', 'fa-flashlight');
   }
 }
 
@@ -2104,9 +2212,11 @@ document.getElementById('btnPlayGame').addEventListener('click', () => {
   
   gameActive = true;
   gameTime = 0;
+  currentPart = 1;
   clock.getDelta(); // reset clock
   initEngine();
   gameLoop();
+  updateLevelProgressDisplay();
   
   // Lock screen
   if (renderer && renderer.domElement) {
@@ -2141,7 +2251,36 @@ document.querySelectorAll('.menu-nav-btn').forEach(btn => {
   });
 });
 
+// Level selection buttons
+document.querySelectorAll('.level-btn').forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    const level = parseInt(btn.dataset.level);
+    if (btn.classList.contains('locked')) {
+      showNotification('Това ниво не е достъпно още!', 'warn');
+      return;
+    }
+    document.querySelectorAll('.level-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentLevel = level;
+    updateLevelProgressDisplay();
+    playSound('click');
+  });
+});
+
+function updateLevelProgressDisplay() {
+  const progress = getProgress();
+  const done = [1,2,3,4,5,6,7,8,9,10].filter(p => progress[`l1_p${p}`]).length;
+  document.getElementById('level1Prog').textContent = done + '/10';
+}
+
 // Victory triggering screen
+function getProgress() {
+  try { return JSON.parse(localStorage.getItem('game_progress') || '{}'); } catch { return {}; }
+}
+function saveProgress(p) {
+  localStorage.setItem('game_progress', JSON.stringify(p));
+}
+
 function triggerVictory() {
   gameActive = false;
   clearInterval(timerInterval);
@@ -2152,9 +2291,27 @@ function triggerVictory() {
   document.getElementById('victoryOverlay').style.display = 'flex';
   document.getElementById('hud').classList.remove('active');
 
-  // Firebase submission and rewards
-  rewardXPAndCredits(50, 25, 'Преминаване на ниво');
+  // Track completed parts
+  const progress = getProgress();
+  const completedKey = `l1_p${currentPart}`;
+  if (!progress[completedKey]) {
+    progress[completedKey] = true;
+    saveProgress(progress);
+  }
+
+  // Check if replaying (all 10 parts done)
+  const allPartsDone = [1,2,3,4,5,6,7,8,9,10].every(p => progress[`l1_p${p}`]);
+  const isReplay = allPartsDone && currentPart <= 10;
+
+  // Rewards (reduced if replay)
+  const xpReward = isReplay ? 10 : 50;
+  const creditReward = isReplay ? 5 : 25;
+  rewardXPAndCredits(xpReward, creditReward, isReplay ? 'Преиграване (намалени награди)' : 'Преминаване на ниво');
   submitLeaderboardRecord(Math.floor(gameTime * 1000));
+
+  if (isReplay) {
+    showNotification('Преиграване — наградите са намалени!', 'warn');
+  }
 
   // Auto-advance to next part after 8 seconds
   setTimeout(() => {
@@ -2209,14 +2366,16 @@ window.exitToMenu = () => {
   document.getElementById('victoryOverlay').style.display = 'none';
   document.getElementById('pauseOverlay').style.display = 'none';
   document.getElementById('mainMenuOverlay').style.display = 'flex';
+  updateLevelProgressDisplay();
   updateMenuPreview();
 };
 
 window.nextLevelPart = () => {
   currentPart++;
   if (currentPart > 10) {
-    currentPart = 1;
-    currentLevel = Math.min(3, currentLevel + 1);
+    currentPart = 10;
+    showNotification('Всички 10 части са завършени! Опитай пак за по-добро време.', 'success');
+    return;
   }
   restartLevel();
 };
@@ -2274,11 +2433,10 @@ window.setDevXP = async () => {
 };
 
 window.unlockAllLevels = () => {
+  document.querySelectorAll('.level-btn.locked').forEach(b => b.classList.remove('locked'));
   currentLevel = 3;
   currentPart = 10;
   showNotification("Всички нива са достъпни!");
-  document.getElementById('level2Prog').textContent = "Част 1/10";
-  document.getElementById('level3Prog').textContent = "Част 1/10";
 };
 
 // -------------------------------------------------------------
@@ -2461,3 +2619,4 @@ window.saveClosetSelection = async () => {
     console.error(err);
   }
 };
+

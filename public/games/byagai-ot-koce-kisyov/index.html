@@ -335,20 +335,55 @@
       position: relative;
     }
 
-    /* Global and level selection */
-    .levels-list {
-      display: flex; flex-direction: column; gap: 0.75rem;
-    }
-    .level-row {
-      background: rgba(255,255,255,0.02);
-      border: 1px solid var(--border-glow);
-      border-radius: 12px; padding: 1rem;
-      cursor: pointer; display: flex; justify-content: space-between; align-items: center;
+    /* Level selection buttons */
+    .level-btn {
+      background: rgba(255,255,255,0.03);
+      border: 2px solid var(--border-glow);
+      border-radius: 14px;
+      padding: 1.2rem 1rem;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.4rem;
       transition: all 0.2s ease;
+      min-width: 120px;
+      flex: 1;
+      color: white;
+      font-family: var(--font-family);
     }
-    .level-row:hover, .level-row.active {
+    .level-btn:hover:not(.locked) {
       border-color: var(--primary);
-      background: rgba(239, 83, 80, 0.05);
+      background: rgba(239, 83, 80, 0.08);
+      transform: translateY(-2px);
+    }
+    .level-btn.active {
+      border-color: var(--primary);
+      background: rgba(239, 83, 80, 0.12);
+      box-shadow: 0 0 20px var(--primary-glow);
+    }
+    .level-btn.locked {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .level-btn .level-num {
+      font-size: 2rem;
+      font-weight: 900;
+      line-height: 1;
+    }
+    .level-btn .level-label {
+      font-size: 0.8rem;
+      color: #a1a1aa;
+    }
+    .level-btn .level-status {
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+    .level-btn.active .level-status {
+      color: #4caf50;
+    }
+    .level-btn.locked .level-status {
+      color: #a1a1aa;
     }
 
     /* Leaderboards table */
@@ -413,6 +448,43 @@
     @keyframes toastIn {
       from { transform: translateY(10px); opacity: 0; }
       to { transform: translateY(0); opacity: 1; }
+    }
+
+    /* Heart Thump Screen Effect */
+    #heartThumpOverlay {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 50;
+      pointer-events: none;
+      background: radial-gradient(ellipse at center, rgba(239, 83, 80, 0.35) 0%, transparent 70%);
+      opacity: 0;
+      transition: opacity 0.1s ease;
+    }
+    #heartThumpOverlay.active {
+      opacity: 1;
+      animation: thumpPulse 0.6s ease-out;
+    }
+    @keyframes thumpPulse {
+      0% { opacity: 1; transform: scale(1); }
+      30% { opacity: 0.8; transform: scale(1.02); }
+      100% { opacity: 0; transform: scale(1.05); }
+    }
+
+    /* Held Item (key/flashlight) in hand */
+    #heldItemDisplay {
+      position: absolute;
+      bottom: 120px; right: 60px;
+      z-index: 15;
+      pointer-events: none;
+      font-size: 3rem;
+      color: rgba(255,255,255,0.6);
+      text-shadow: 0 0 20px rgba(255,215,0,0.3);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    #heldItemDisplay.active {
+      opacity: 1;
     }
 
     /* Dynamic Zone Popup */
@@ -536,6 +608,8 @@
     <!-- In-Game HUD -->
     <div id="hud">
       <div id="toastContainer"></div>
+      <div id="heartThumpOverlay"></div>
+      <div id="heldItemDisplay"><i class="fas fa-hand"></i></div>
       <div class="hud-top">
         <div class="hud-stats-group">
           <div class="hud-stat-bar" id="heartsContainer" style="gap: 0.3rem; margin-bottom: 0.25rem;">
@@ -581,7 +655,6 @@
           </div>
           <div class="hotbar-slot" data-slot="2" id="slot-2">
             <span class="hotbar-slot-key">2</span>
-            <i class="fas fa-flashlight" id="slotFlashlightIcon" style="display: none;"></i>
           </div>
           <div class="hotbar-slot" data-slot="3" id="slot-3">
             <span class="hotbar-slot-key">3</span>
@@ -637,28 +710,22 @@
           <!-- Play Panel -->
           <div id="play-tab" class="menu-panel active">
             <h2>Избор на Ниво</h2>
-            <div class="levels-list">
-              <div class="level-row active" data-level="1">
-                <div>
-                  <h4 style="color: var(--primary);">Ниво 1: Библиотеката</h4>
-                  <p style="font-size: 0.78rem; color: #a1a1aa; margin-top: 0.2rem;">Двуетажен архив с книги. Намери ключа за задната врата.</p>
-                </div>
-                <span id="level1Prog">Част 1/10</span>
-              </div>
-              <div class="level-row" data-level="2">
-                <div>
-                  <h4>Ниво 2: Училищен Коридор</h4>
-                  <p style="font-size: 0.78rem; color: #a1a1aa; margin-top: 0.2rem;">Тесни коридори, шкафчета за скриване и затворени класни стаи.</p>
-                </div>
-                <span id="level2Prog">Заключено</span>
-              </div>
-              <div class="level-row" data-level="3">
-                <div>
-                  <h4>Ниво 3: Столовата</h4>
-                  <p style="font-size: 0.78rem; color: #a1a1aa; margin-top: 0.2rem;">Множество маси за хранене и опасен кухненски бокс с пара.</p>
-                </div>
-                <span id="level3Prog">Заключено</span>
-              </div>
+            <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
+              <button class="level-btn active" data-level="1">
+                <span class="level-num">1</span>
+                <span class="level-label">Библиотека</span>
+                <span class="level-status" id="level1Prog">0/10</span>
+              </button>
+              <button class="level-btn locked" data-level="2">
+                <span class="level-num">2</span>
+                <span class="level-label">Коридор</span>
+                <span class="level-status"><i class="fas fa-lock"></i></span>
+              </button>
+              <button class="level-btn locked" data-level="3">
+                <span class="level-num">3</span>
+                <span class="level-label">Столова</span>
+                <span class="level-status"><i class="fas fa-lock"></i></span>
+              </button>
             </div>
           </div>
 
