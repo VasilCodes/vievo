@@ -1,28 +1,78 @@
 <!DOCTYPE html>
-<html lang="bg" data-theme="dark">
+<html lang="bg">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Весо симулатор - Виево банда</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      width: 100%; height: 100vh;
+      background: #050508;
+      color: #f3f4f6;
+      font-family: 'Segoe UI', Roboto, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+    }
+    .container {
+      text-align: center;
+      padding: 2rem;
+    }
+    .title {
+      font-size: 2.5rem;
+      font-weight: 800;
+      color: #22c55e;
+      text-shadow: 0 0 40px rgba(34, 197, 94, 0.3);
+      margin-bottom: 1rem;
+    }
+    .subtitle {
+      font-size: 1.2rem;
+      color: #71717a;
+      margin-bottom: 2rem;
+    }
+    .construction-icon {
+      font-size: 4rem;
+      color: #f59e0b;
+      margin-bottom: 1.5rem;
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 0.7; }
+      50% { transform: scale(1.1); opacity: 1; }
+    }
+    .loader {
+      display: flex;
+      justify-content: center;
+      gap: 0.5rem;
+      margin-top: 2rem;
+    }
+    .loader span {
+      width: 12px; height: 12px;
+      border-radius: 50%;
+      background: #22c55e;
+      animation: bounce 1.4s ease-in-out infinite both;
+    }
+    .loader span:nth-child(1) { animation-delay: -0.32s; }
+    .loader span:nth-child(2) { animation-delay: -0.16s; }
+    .loader span:nth-child(3) { animation-delay: 0s; }
+    @keyframes bounce {
+      0%, 80%, 100% { transform: scale(0); }
+      40% { transform: scale(1); }
+    }
+  </style>
 </head>
 <body>
-  <div class="game-container">
-    <div class="game-header">
-      <h1>Весо симулатор</h1>
-      <a href="/games/" class="btn-back">← Назад</a>
-    </div>
-    <div class="game-canvas-wrapper">
-      <canvas id="gameCanvas"></canvas>
-    </div>
-    <div class="game-info">
-      <p>Играта е в процес на разработка. Очаквайте скоро!</p>
+  <div class="container">
+    <div class="construction-icon"><i class="fas fa-hard-hat"></i></div>
+    <div class="title">Весо симулатор</div>
+    <div class="subtitle">Играта е в процес на разработка</div>
+    <div class="subtitle" style="font-size: 1rem; color: #52525b;">Ще бъде достъпна скоро</div>
+    <div class="loader">
+      <span></span><span></span><span></span>
     </div>
   </div>
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-  <script src="/js/index.js"></script>
-  <script src="script.js"></script>
 </body>
 </html>
