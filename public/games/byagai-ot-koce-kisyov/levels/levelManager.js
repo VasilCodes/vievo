@@ -305,7 +305,13 @@ LEVELS.load = function (num) {
 
   // Koce
   if (ENGINE.createKoce && levelData.koce) {
-    ENGINE.createKoce(levelData.koce);
+    const kc = levelData.koce;
+    ENGINE.createKoce({
+      spawn: new THREE.Vector3(kc.spawn.x, kc.spawn.y || 0, kc.spawn.z),
+      patrolPath: (kc.patrolPath || []).map(p => new THREE.Vector3(p.x, p.y || 0, p.z)),
+      speed: kc.speed,
+      chaseSpeed: kc.chaseSpeed
+    });
   }
 
   const zone = LEVELS.zoneNames[num] || 'Зона';
