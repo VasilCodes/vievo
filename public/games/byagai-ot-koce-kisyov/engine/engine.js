@@ -85,7 +85,7 @@ ENGINE.startLoop = function () {
 
 ENGINE.stop = function () {
   ENGINE.running = false;
-  ENGINE.renderer.setAnimationLoop(null);
+  if (ENGINE.renderer) ENGINE.renderer.setAnimationLoop(null);
 };
 
 ENGINE.clearLevel = function () {
