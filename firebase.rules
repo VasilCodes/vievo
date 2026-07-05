@@ -135,16 +135,34 @@ service cloud.firestore {
       allow read: if isAuth();
       allow create, update, delete: if isAuth() && (getUserRole(request.auth.uid) == 'admin' || getUserRole(request.auth.uid) == 'owner');
 
-      // Shop subcollection
-      match /shop/{itemId} {
+      // Game users (e.g. games/byagai-ot-koce-kisyov/users/{uid})
+      match /users/{userId} {
         allow read: if isAuth();
-        allow create, update, delete: if isAuth() && (getUserRole(request.auth.uid) == 'admin' || getUserRole(request.auth.uid) == 'owner');
+        allow create: if isAuth() && request.auth.uid == userId;
+        allow update: if isAuth() && request.auth.uid == userId
+          && (!("role" in request.resource.data) || request.resource.data.role == resource.data.role);
+        allow delete: if false;
+      }
+
+      // Shop subcollection — supports nested categories: games/{gameId}/shop/{category}/items/{itemId}
+      match /shop/{category} {
+        allow read: if isAuth();
+        allow create, update, delete: if isAuth()
+          && (getUserRole(request.auth.uid) == 'admin' || getUserRole(request.auth.uid) == 'owner');
+
+        match /items/{itemId} {
+          allow read: if isAuth();
+          allow create, update, delete: if isAuth()
+            && (getUserRole(request.auth.uid) == 'admin' || getUserRole(request.auth.uid) == 'owner');
+        }
       }
 
       // Leaderboard subcollection
       match /leaderboard/{scoreId} {
         allow read: if isAuth();
-        allow create, update: if isAuth() && request.resource.data.user_id == request.auth.uid;
+        allow create: if isAuth() && request.resource.data.user_id == request.auth.uid;
+        allow update: if isAuth() && request.resource.data.user_id == request.auth.uid
+          && request.resource.data.score > resource.data.score;
         allow delete: if isAuth() && (getUserRole(request.auth.uid) == 'admin' || getUserRole(request.auth.uid) == 'owner');
       }
     }
