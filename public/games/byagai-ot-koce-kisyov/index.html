@@ -73,6 +73,62 @@
       <div id="heartsRow"></div>
     </div>
 
+    <!-- Character Customization Overlay -->
+    <div id="customizeOverlay" class="overlay">
+      <div class="overlay-panel" style="max-width:480px;">
+        <h2><i class="fas fa-user"></i> Създай герой</h2>
+        <div class="char-preview-wrap">
+          <canvas id="charPreviewCanvas" width="150" height="200"></canvas>
+        </div>
+        <div class="customize-form">
+          <div class="form-group">
+            <label class="form-label">Пол</label>
+            <select id="charGender" class="form-input">
+              <option value="m">Мъж</option>
+              <option value="f">Жена</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Тениска</label>
+              <input type="color" id="charShirt" value="#3388ff" class="form-color">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Панталон</label>
+              <input type="color" id="charPants" value="#3355aa" class="form-color">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Коса</label>
+              <input type="color" id="charHair" value="#5d3a1a" class="form-color">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Кожа</label>
+              <input type="color" id="charSkin" value="#ffccaa" class="form-color">
+            </div>
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="saveCharacter()" style="margin-top:1rem;">
+          <i class="fas fa-check"></i> Готово
+        </button>
+        <button class="btn btn-secondary btn-sm" onclick="closeCustomize()" style="margin-top:8px;">
+          <i class="fas fa-arrow-left"></i> Назад
+        </button>
+      </div>
+    </div>
+
+    <!-- Touch Controls (shown on mobile) -->
+    <div id="touchControls" style="display:none;">
+      <div id="touchJoystick">
+        <div id="touchJoystickKnob"></div>
+      </div>
+      <div id="touchButtons">
+        <button class="touch-btn" id="touchJumpBtn"><i class="fas fa-arrow-up"></i></button>
+        <button class="touch-btn" id="touchSprintBtn"><i class="fas fa-running"></i></button>
+      </div>
+    </div>
+
     <!-- Auth Overlay -->
     <div id="authOverlay" class="overlay">
       <div class="overlay-panel" style="max-width:380px;">

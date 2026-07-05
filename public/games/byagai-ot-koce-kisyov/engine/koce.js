@@ -1,6 +1,6 @@
 ENGINE.createKoce = function (config) {
   const state = {
-    mode: 'patrol',        // patrol | search | chase
+    mode: 'patrol',
     position: config.spawn.clone(),
     speed: 1.8,
     chaseSpeed: 3.5,
@@ -16,59 +16,79 @@ ENGINE.createKoce = function (config) {
     waitTimer: 0,
     model: null,
     bodyGroup: new THREE.Group(),
-    height: 1.7,
+    height: 1.8,
     eyeHeight: 1.6
   };
 
-  // Body
-  const bodyMat = new THREE.MeshStandardMaterial({ color: 0x1a73e8 });
-  const body = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.8, 0.3), bodyMat);
-  body.position.y = 0.8;
-  body.castShadow = true;
-  state.bodyGroup.add(body);
+  // ── Blocky Minecraft‑style model ──
+  // Torso / body
+  const torsoMat = new THREE.MeshStandardMaterial({ color: 0xcc2222 });
+  const torso = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.25), torsoMat);
+  torso.position.y = 0.9;
+  torso.castShadow = true;
+  state.bodyGroup.add(torso);
 
-  // Head
-  const headMat = new THREE.MeshStandardMaterial({ color: 0xffccaa });
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.25, 8, 8), headMat);
+  // Head (blocky)
+  const skinMat = new THREE.MeshStandardMaterial({ color: 0xffccaa });
+  const head = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.35, 0.3), skinMat);
   head.position.y = 1.5;
   head.castShadow = true;
   state.bodyGroup.add(head);
 
-  // Hair (brown)
+  // Hair (brown block on top)
   const hairMat = new THREE.MeshStandardMaterial({ color: 0x5d3a1a });
-  const hair = new THREE.Mesh(new THREE.SphereGeometry(0.2, 8, 6), hairMat);
-  hair.position.set(0, 1.7, 0.05);
-  hair.scale.set(1.3, 0.3, 1);
+  const hair = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.08, 0.35), hairMat);
+  hair.position.set(0, 1.68, 0);
   state.bodyGroup.add(hair);
+  const hairFront = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.12, 0.08), hairMat);
+  hairFront.position.set(0, 1.63, 0.16);
+  state.bodyGroup.add(hairFront);
 
-  // Eyes (big)
-  const eyeMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
-  const pupilMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
-  const addEye = (x) => {
-    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.08, 6, 6), eyeMat);
-    eye.position.set(x, 1.55, 0.25);
+  // Eyes (white block with dark pupil)
+  const eyeWMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
+  const eyePMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
+  const addBlockEye = (x) => {
+    const eye = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.1, 0.04), eyeWMat);
+    eye.position.set(x, 1.5, 0.17);
     state.bodyGroup.add(eye);
-    const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.04, 6, 6), pupilMat);
-    pupil.position.set(x + 0.02, 1.54, 0.30);
+    const pupil = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.06, 0.05), eyePMat);
+    pupil.position.set(x + 0.01, 1.5, 0.19);
     state.bodyGroup.add(pupil);
   };
-  addEye(-0.08);
-  addEye(0.08);
+  addBlockEye(-0.08);
+  addBlockEye(0.08);
 
-  // Red shirt
-  const shirtMat = new THREE.MeshStandardMaterial({ color: 0xcc2222 });
-  const shirt = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.4, 0.25), shirtMat);
-  shirt.position.y = 0.55;
-  state.bodyGroup.add(shirt);
+  // Mouth
+  const mouthMat = new THREE.MeshStandardMaterial({ color: 0x442222 });
+  const mouth = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.02, 0.03), mouthMat);
+  mouth.position.set(0, 1.36, 0.17);
+  state.bodyGroup.add(mouth);
 
-  // Blue jeans
+  // Arms
+  const armMat = new THREE.MeshStandardMaterial({ color: 0xffccaa });
+  for (const ax of [-0.38, 0.38]) {
+    const arm = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.45, 0.1), armMat);
+    arm.position.set(ax, 0.9, 0);
+    arm.castShadow = true;
+    state.bodyGroup.add(arm);
+  }
+
+  // Legs (blue jeans)
   const jeansMat = new THREE.MeshStandardMaterial({ color: 0x2255aa });
-  const jeansL = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.5, 0.17), jeansMat);
-  jeansL.position.set(-0.15, 0.2, 0);
-  state.bodyGroup.add(jeansL);
-  const jeansR = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.5, 0.17), jeansMat);
-  jeansR.position.set(0.15, 0.2, 0);
-  state.bodyGroup.add(jeansR);
+  for (const lx of [-0.12, 0.12]) {
+    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.5, 0.14), jeansMat);
+    leg.position.set(lx, 0.2, 0);
+    leg.castShadow = true;
+    state.bodyGroup.add(leg);
+  }
+
+  // Shoes
+  const shoeMat = new THREE.MeshStandardMaterial({ color: 0x333333 });
+  for (const sx of [-0.12, 0.12]) {
+    const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.05, 0.22), shoeMat);
+    shoe.position.set(sx, 0.03, 0.02);
+    state.bodyGroup.add(shoe);
+  }
 
   state.bodyGroup.position.copy(state.position);
   state.bodyGroup.position.y = 0;

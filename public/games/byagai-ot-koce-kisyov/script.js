@@ -50,6 +50,14 @@ function hideAllOverlays() {
 }
 
 function startGame() {
+  // Check character customization first
+  if (needsCharacterCustomization()) {
+    document.getElementById('mainMenu').style.display = 'none';
+    document.getElementById('customizeOverlay').style.display = 'flex';
+    setTimeout(initCharacterPreview, 100);
+    return;
+  }
+
   document.getElementById('mainMenu').style.display = 'none';
   document.getElementById('gameCanvas').style.display = 'block';
   document.getElementById('hud').style.display = 'block';
@@ -908,12 +916,191 @@ document.addEventListener('keydown', (e) => {
         else if (o.id === 'gameOverOverlay') restartGame();
         else if (o.id === 'authOverlay') closeAuth();
         else if (o.id === 'adminOverlay') closeAdmin();
+        else if (o.id === 'customizeOverlay') closeCustomize();
         else o.style.display = 'none';
         break;
       }
     }
   }
 });
+
+/* ───── Character Customization ───── */
+let charPreviewRenderer = null;
+let charPreviewScene = null;
+let charPreviewCamera = null;
+let charPreviewModel = null;
+
+function needsCharacterCustomization() {
+  return !localStorage.getItem('byagai_char_custom');
+}
+
+function initCharacterPreview() {
+  const canvas = document.getElementById('charPreviewCanvas');
+  if (!canvas) return;
+  charPreviewScene = new THREE.Scene();
+  charPreviewScene.background = new THREE.Color(0x1a1a2e);
+
+  charPreviewCamera = new THREE.PerspectiveCamera(30, 0.75, 0.1, 10);
+  charPreviewCamera.position.set(0, 1, 2.5);
+  charPreviewCamera.lookAt(0, 0.8, 0);
+
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+  renderer.setSize(150, 200);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  charPreviewRenderer = renderer;
+
+  const ambient = new THREE.AmbientLight(0x404060, 0.6);
+  charPreviewScene.add(ambient);
+  const dl = new THREE.DirectionalLight(0xffffff, 0.9);
+  dl.position.set(1, 2, 2);
+  charPreviewScene.add(dl);
+  const dl2 = new THREE.DirectionalLight(0x8888ff, 0.3);
+  dl2.position.set(-1, 1, -2);
+  charPreviewScene.add(dl2);
+
+  updateCharPreview();
+
+  function loop() {
+    if (!charPreviewRenderer || !charPreviewScene || !charPreviewCamera) return;
+    if (charPreviewModel) charPreviewModel.rotation.y += 0.015;
+    renderer.render(charPreviewScene, charPreviewCamera);
+    requestAnimationFrame(loop);
+  }
+  loop();
+}
+
+function updateCharPreview() {
+  if (!charPreviewScene) return;
+  if (charPreviewModel) {
+    charPreviewScene.remove(charPreviewModel);
+    charPreviewModel.traverse(c => {
+      if (c.geometry) c.geometry.dispose();
+      if (c.material) {
+        if (Array.isArray(c.material)) c.material.forEach(m => m.dispose());
+        else c.material.dispose();
+      }
+    });
+  }
+  const shirt = document.getElementById('charShirt').value;
+  const pants = document.getElementById('charPants').value;
+  const hair = document.getElementById('charHair').value;
+  const skin = document.getElementById('charSkin').value;
+  charPreviewModel = ENGINE.createCharacterModel({
+    shirtColor: shirt, pantsColor: pants, hairColor: hair, skinColor: skin
+  });
+  charPreviewScene.add(charPreviewModel);
+}
+
+function saveCharacter() {
+  const data = {
+    gender: document.getElementById('charGender').value,
+    shirtColor: document.getElementById('charShirt').value,
+    pantsColor: document.getElementById('charPants').value,
+    hairColor: document.getElementById('charHair').value,
+    skinColor: document.getElementById('charSkin').value,
+  };
+  localStorage.setItem('byagai_char_custom', JSON.stringify(data));
+  if (charPreviewRenderer) {
+    charPreviewRenderer.dispose();
+    charPreviewRenderer = null;
+    charPreviewScene = null;
+    charPreviewCamera = null;
+    charPreviewModel = null;
+  }
+  document.getElementById('customizeOverlay').style.display = 'none';
+  startGame();
+}
+
+function getCharacterCustomization() {
+  try { return JSON.parse(localStorage.getItem('byagai_char_custom')); } catch { return null; }
+}
+
+function closeCustomize() {
+  if (charPreviewRenderer) {
+    charPreviewRenderer.dispose();
+    charPreviewRenderer = null;
+    charPreviewScene = null;
+    charPreviewCamera = null;
+    charPreviewModel = null;
+  }
+  document.getElementById('customizeOverlay').style.display = 'none';
+  document.getElementById('mainMenu').style.display = 'flex';
+}
+
+// Wire color inputs to live preview
+document.addEventListener('DOMContentLoaded', () => {
+  const inputs = document.querySelectorAll('#charShirt, #charPants, #charHair, #charSkin');
+  inputs.forEach(inp => inp.addEventListener('input', updateCharPreview));
+});
+
+/* ───── Touch Controls (mobile) ───── */
+function initTouchControls() {
+  const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  if (!isTouch) return;
+
+  const tc = document.getElementById('touchControls');
+  if (tc) tc.style.display = 'flex';
+
+  const joystick = document.getElementById('touchJoystick');
+  const knob = document.getElementById('touchJoystickKnob');
+  let activeTouchId = null;
+
+  if (!joystick) return;
+
+  const resetJoystick = () => {
+    activeTouchId = null;
+    knob.style.transform = 'translate(-50%, -50%)';
+    if (ENGINE.player) { ENGINE.player.touchMove.x = 0; ENGINE.player.touchMove.y = 0; }
+  };
+
+  const handleMove = (touch) => {
+    const rect = joystick.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const dx = touch.clientX - cx;
+    const dy = touch.clientY - cy;
+    const maxR = rect.width / 2;
+    const dist = Math.min(Math.sqrt(dx * dx + dy * dy), maxR);
+    const ang = Math.atan2(dy, dx);
+    const nx = Math.cos(ang) * dist / maxR;
+    const ny = Math.sin(ang) * dist / maxR;
+    knob.style.transform = `translate(calc(-50% + ${nx * maxR}px), calc(-50% + ${ny * maxR}px))`;
+    if (ENGINE.player) {
+      ENGINE.player.touchMove.x = nx;
+      ENGINE.player.touchMove.y = -ny;
+    }
+  };
+
+  joystick.addEventListener('touchstart', e => {
+    e.preventDefault();
+    activeTouchId = e.changedTouches[0].identifier;
+    handleMove(e.changedTouches[0]);
+  }, { passive: false });
+  joystick.addEventListener('touchmove', e => {
+    e.preventDefault();
+    for (const t of e.changedTouches) {
+      if (t.identifier === activeTouchId) handleMove(t);
+    }
+  }, { passive: false });
+  joystick.addEventListener('touchend', e => {
+    e.preventDefault();
+    for (const t of e.changedTouches) {
+      if (t.identifier === activeTouchId) resetJoystick();
+    }
+  }, { passive: false });
+  joystick.addEventListener('touchcancel', resetJoystick);
+
+  const jumpBtn = document.getElementById('touchJumpBtn');
+  if (jumpBtn) {
+    jumpBtn.addEventListener('touchstart', e => { e.preventDefault(); if (ENGINE.player) ENGINE.player.touchJump = true; }, { passive: false });
+  }
+  const sprintBtn = document.getElementById('touchSprintBtn');
+  if (sprintBtn) {
+    sprintBtn.addEventListener('touchstart', e => { e.preventDefault(); if (ENGINE.player) ENGINE.player.touchSprinting = true; }, { passive: false });
+    sprintBtn.addEventListener('touchend', e => { e.preventDefault(); if (ENGINE.player) ENGINE.player.touchSprinting = false; }, { passive: false });
+    sprintBtn.addEventListener('touchcancel', () => { if (ENGINE.player) ENGINE.player.touchSprinting = false; });
+  }
+}
 
 /* ───── Init ───── */
 document.addEventListener('DOMContentLoaded', () => {
@@ -924,4 +1111,5 @@ document.addEventListener('DOMContentLoaded', () => {
       refreshAdminItems();
     });
   }
+  initTouchControls();
 });

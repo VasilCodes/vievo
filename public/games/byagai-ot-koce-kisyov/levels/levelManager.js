@@ -19,7 +19,19 @@ const MATS = {
   lockerHandle: new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.6, roughness: 0.3 }),
   bench: new THREE.MeshStandardMaterial({ color: 0x8b6914, roughness: 0.6 }),
   benchMetal: new THREE.MeshStandardMaterial({ color: 0x666666, metalness: 0.5, roughness: 0.4 }),
-  floorTile: new THREE.MeshStandardMaterial({ color: 0x556677, roughness: 0.6 })
+  floorTile: new THREE.MeshStandardMaterial({ color: 0x556677, roughness: 0.6 }),
+  // Two-story / furniture
+  floor2: new THREE.MeshStandardMaterial({ color: 0x3a2a1a, roughness: 0.9 }),
+  stair: new THREE.MeshStandardMaterial({ color: 0x5c3a1e, roughness: 0.7 }),
+  chair: new THREE.MeshStandardMaterial({ color: 0x2a2a2a, roughness: 0.5, metalness: 0.2 }),
+  chairSeat: new THREE.MeshStandardMaterial({ color: 0x8b4513, roughness: 0.8 }),
+  monitor: new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.3 }),
+  screen: new THREE.MeshStandardMaterial({ color: 0x334466, emissive: 0x2244aa, emissiveIntensity: 0.2 }),
+  sofa: new THREE.MeshStandardMaterial({ color: 0x6b3f3f, roughness: 0.7 }),
+  sofaCushion: new THREE.MeshStandardMaterial({ color: 0x7a4a4a, roughness: 0.7 }),
+  padlock: new THREE.MeshStandardMaterial({ color: 0xccaa33, metalness: 0.7, roughness: 0.3 }),
+  padlockShackle: new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.6, roughness: 0.3 }),
+  platform: new THREE.MeshStandardMaterial({ color: 0x3a2a1a, roughness: 0.9 }),
 };
 
 // ─── Room builder ───
@@ -123,13 +135,14 @@ LEVELS.buildRoom = function (cfg) {
 };
 
 // ─── Furniture helpers ───
-LEVELS.addShelf = function (x, z, w, d) {
+LEVELS.addShelf = function (x, z, w, d, y) {
   const g = ENGINE.levelGroup;
   const boxes = ENGINE.currentLevel.collisionBoxes;
   const h = 2;
+  const yy = y || 0;
   // Body
   const body = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), MATS.shelf);
-  body.position.set(x, h / 2, z);
+  body.position.set(x, yy + h / 2, z);
   body.castShadow = true;
   body.receiveShadow = true;
   g.add(body);
@@ -142,7 +155,7 @@ LEVELS.addShelf = function (x, z, w, d) {
     );
     book.position.set(
       x + (i - 1.5) * (w * 0.18),
-      0.3 + i * 0.45,
+      yy + 0.3 + i * 0.45,
       z + (d * 0.05)
     );
     g.add(book);
@@ -150,18 +163,19 @@ LEVELS.addShelf = function (x, z, w, d) {
   // Collision
   const hw = w / 2, hd = d / 2;
   boxes.push({
-    min: new THREE.Vector3(x - hw, 0, z - hd),
-    max: new THREE.Vector3(x + hw, h, z + hd)
+    min: new THREE.Vector3(x - hw, yy, z - hd),
+    max: new THREE.Vector3(x + hw, yy + h, z + hd)
   });
 };
 
-LEVELS.addTable = function (x, z, w, d) {
+LEVELS.addTable = function (x, z, w, d, y) {
   const g = ENGINE.levelGroup;
   const boxes = ENGINE.currentLevel.collisionBoxes;
   const h = 0.7;
+  const yy = y || 0;
   // Top
   const top = new THREE.Mesh(new THREE.BoxGeometry(w, 0.05, d), MATS.table);
-  top.position.set(x, h, z);
+  top.position.set(x, yy + h, z);
   top.castShadow = true;
   top.receiveShadow = true;
   g.add(top);
@@ -170,12 +184,12 @@ LEVELS.addTable = function (x, z, w, d) {
                   [-w / 2 + 0.05, d / 2 - 0.05], [w / 2 - 0.05, d / 2 - 0.05]];
   legPos.forEach(([lx, lz]) => {
     const leg = new THREE.Mesh(new THREE.BoxGeometry(0.04, h, 0.04), MATS.table);
-    leg.position.set(x + lx, h / 2, z + lz);
+    leg.position.set(x + lx, yy + h / 2, z + lz);
     g.add(leg);
   });
   boxes.push({
-    min: new THREE.Vector3(x - w / 2, 0, z - d / 2),
-    max: new THREE.Vector3(x + w / 2, h + 0.05, z + d / 2)
+    min: new THREE.Vector3(x - w / 2, yy, z - d / 2),
+    max: new THREE.Vector3(x + w / 2, yy + h + 0.05, z + d / 2)
   });
 };
 
@@ -200,18 +214,19 @@ LEVELS.addFlashlight = function (x, z) {
   });
 };
 
-LEVELS.addKey = function (x, z) {
+LEVELS.addKey = function (x, z, y) {
   const g = ENGINE.levelGroup;
+  const ky = y || 0.1;
   const ring = new THREE.Mesh(new THREE.TorusGeometry(0.04, 0.01, 6, 12), MATS.key);
-  ring.position.set(x, 0.1, z);
+  ring.position.set(x, ky, z);
   ring.rotation.x = Math.PI / 2;
   g.add(ring);
   const shaft = new THREE.Mesh(new THREE.BoxGeometry(0.01, 0.07, 0.005), MATS.key);
-  shaft.position.set(x, 0.06, z);
+  shaft.position.set(x, ky - 0.04, z);
   g.add(shaft);
   ENGINE.items.push({
     type: 'key',
-    position: new THREE.Vector3(x, 0.1, z),
+    position: new THREE.Vector3(x, ky, z),
     mesh: ring,
     collected: false
   });
@@ -259,6 +274,166 @@ LEVELS.addBench = function (x, z, w) {
   });
 };
 
+// ─── Two‑story helpers ───
+LEVELS.addSecondFloor = function (cfg) {
+  const g = ENGINE.levelGroup;
+  const boxes = ENGINE.currentLevel.collisionBoxes;
+  const platforms = ENGINE.currentLevel.platforms;
+  const h = 0.15;
+  const platform = new THREE.Mesh(new THREE.BoxGeometry(cfg.w, h, cfg.d), MATS.platform);
+  platform.position.set(cfg.x, cfg.y, cfg.z);
+  platform.receiveShadow = true;
+  platform.castShadow = true;
+  g.add(platform);
+  const min = new THREE.Vector3(cfg.x - cfg.w / 2, cfg.y, cfg.z - cfg.d / 2);
+  const max = new THREE.Vector3(cfg.x + cfg.w / 2, cfg.y + h, cfg.z + cfg.d / 2);
+  boxes.push({ min: min.clone(), max: max.clone(), isPlatform: true });
+  platforms.push({ min: min.clone(), max: max.clone() });
+};
+
+LEVELS.addStairs = function (cfg) {
+  const g = ENGINE.levelGroup;
+  const boxes = ENGINE.currentLevel.collisionBoxes;
+  const platforms = ENGINE.currentLevel.platforms;
+  const steps = cfg.steps || 10;
+  const stepH = (cfg.topY - cfg.bottomY) / steps || 0.3;
+  const stepW = cfg.w || 1.2;
+  const stepD = cfg.d / steps || 0.25;
+  for (let i = 0; i < steps; i++) {
+    const t = i / steps;
+    const sx = cfg.x + (cfg.dirX || 0) * cfg.d * t;
+    const sz = cfg.z + (cfg.dirZ || 0) * cfg.d * t;
+    const sy = cfg.bottomY + stepH * i + stepH / 2;
+    const m = new THREE.Mesh(new THREE.BoxGeometry(stepW, stepH, stepD * 1.05), MATS.stair);
+    m.position.set(sx, sy, sz);
+    m.castShadow = true;
+    m.receiveShadow = true;
+    g.add(m);
+    const min = new THREE.Vector3(sx - stepW / 2, sy - stepH / 2, sz - stepD * 0.525);
+    const max = new THREE.Vector3(sx + stepW / 2, sy + stepH / 2, sz + stepD * 0.525);
+    // Add to platforms (Y-only collision for stepping) and boxes (full collision)
+    platforms.push({ min: min.clone(), max: max.clone() });
+    boxes.push({ min, max, isPlatform: true });
+  }
+};
+
+// ─── New furniture helpers ───
+LEVELS.addShelfPair = function (x, z, w, d, spacing) {
+  const s = spacing || 0.8;
+  LEVELS.addShelf(x - s / 2, z, w, d);
+  LEVELS.addShelf(x + s / 2, z, w, d);
+};
+
+LEVELS.addChair = function (x, z, rotY, y) {
+  const g = ENGINE.levelGroup;
+  const boxes = ENGINE.currentLevel.collisionBoxes;
+  const seatH = 0.45;
+  const yy = y || 0;
+  // Seat cushion
+  const seat = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.04, 0.35), MATS.chairSeat);
+  seat.position.set(x, yy + seatH, z);
+  seat.castShadow = true;
+  g.add(seat);
+  // Backrest
+  const back = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.35, 0.04), MATS.chairSeat);
+  back.position.set(x, yy + seatH + 0.18, z - 0.18);
+  back.castShadow = true;
+  g.add(back);
+  // Legs (4)
+  const legH = seatH;
+  for (const lx of [-0.14, 0.14]) {
+    for (const lz of [-0.14, 0.14]) {
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.025, legH, 0.025), MATS.chair);
+      leg.position.set(x + lx, yy + legH / 2, z + lz);
+      g.add(leg);
+    }
+  }
+  boxes.push({
+    min: new THREE.Vector3(x - 0.2, yy, z - 0.2),
+    max: new THREE.Vector3(x + 0.2, yy + seatH + 0.4, z + 0.2)
+  });
+};
+
+LEVELS.addComputerDesk = function (x, z, rotY) {
+  const g = ENGINE.levelGroup;
+  const boxes = ENGINE.currentLevel.collisionBoxes;
+  const deskH = 0.7;
+  // Desktop
+  const top = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.05, 0.45), MATS.table);
+  top.position.set(x, deskH, z);
+  top.castShadow = true;
+  g.add(top);
+  // Monitor stand
+  const stand = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.2, 0.02), MATS.monitor);
+  stand.position.set(x, deskH + 0.1, z + 0.05);
+  g.add(stand);
+  // Monitor screen
+  const scr = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.25, 0.03), MATS.screen);
+  scr.position.set(x, deskH + 0.3, z + 0.05);
+  scr.castShadow = true;
+  g.add(scr);
+  // Monitor back
+  const back = new THREE.Mesh(new THREE.BoxGeometry(0.37, 0.27, 0.02), MATS.monitor);
+  back.position.set(x, deskH + 0.3, z + 0.02);
+  g.add(back);
+  // Keyboard
+  const kb = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.02, 0.1), MATS.monitor);
+  kb.position.set(x, deskH + 0.03, z - 0.08);
+  g.add(kb);
+  // Legs
+  for (const lx of [-0.32, 0.32]) {
+    for (const lz of [-0.2, 0.2]) {
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.03, deskH, 0.03), MATS.table);
+      leg.position.set(x + lx, deskH / 2, z + lz);
+      g.add(leg);
+    }
+  }
+  boxes.push({
+    min: new THREE.Vector3(x - 0.38, 0, z - 0.25),
+    max: new THREE.Vector3(x + 0.38, deskH + 0.4, z + 0.25)
+  });
+};
+
+LEVELS.addSofa = function (x, z, w) {
+  const g = ENGINE.levelGroup;
+  const boxes = ENGINE.currentLevel.collisionBoxes;
+  const h = 0.5;
+  // Base
+  const base = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.6), MATS.sofa);
+  base.position.set(x, h / 2, z);
+  base.castShadow = true;
+  base.receiveShadow = true;
+  g.add(base);
+  // Backrest
+  const back = new THREE.Mesh(new THREE.BoxGeometry(w, 0.4, 0.08), MATS.sofaCushion);
+  back.position.set(x, h + 0.2, z - 0.3);
+  back.castShadow = true;
+  g.add(back);
+  // Armrests
+  for (const ax of [-w / 2 + 0.06, w / 2 - 0.06]) {
+    const arm = new THREE.Mesh(new THREE.BoxGeometry(0.08, h + 0.1, 0.55), MATS.sofa);
+    arm.position.set(x + ax, h / 2 + 0.05, z);
+    g.add(arm);
+  }
+  boxes.push({
+    min: new THREE.Vector3(x - w / 2, 0, z - 0.35),
+    max: new THREE.Vector3(x + w / 2, h + 0.6, z + 0.35)
+  });
+};
+
+LEVELS.addPadlock = function (pos) {
+  const g = ENGINE.levelGroup;
+  // Lock body
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.08, 0.04), MATS.padlock);
+  body.position.set(pos.x, pos.y + 0.7, pos.z);
+  g.add(body);
+  // Shackle
+  const shackle = new THREE.Mesh(new THREE.TorusGeometry(0.04, 0.01, 4, 8), MATS.padlockShackle);
+  shackle.position.set(pos.x, pos.y + 0.78, pos.z);
+  shackle.rotation.x = Math.PI / 2;
+  g.add(shackle);
+};
+
 // ─── Zone name map ───
 LEVELS.zoneNames = {
   1: 'Библиотека', 2: 'Библиотека', 3: 'Библиотека', 4: 'Библиотека', 5: 'Библиотека',
@@ -274,7 +449,7 @@ LEVELS.currentLevelNum = 0;
 
 LEVELS.load = function (num) {
   ENGINE.clearLevel();
-  ENGINE.currentLevel = { collisionBoxes: [] };
+  ENGINE.currentLevel = { collisionBoxes: [], platforms: [] };
 
   const levelData = LEVELS.registry[num];
   if (!levelData) {
@@ -288,15 +463,59 @@ LEVELS.load = function (num) {
   ENGINE.currentLevel.floorY = levelData.room.floorY || 0;
   ENGINE.currentLevelNum = num;
 
+  // Two-story extras
+  if (levelData.twoStory) {
+    ENGINE.currentLevel.isTwoStory = true;
+    // Dimmer ceiling lights on first floor — will add separately for second floor
+  }
+  if (levelData.secondFloor) {
+    LEVELS.addSecondFloor(levelData.secondFloor);
+    // Dimmer lights on second floor ceiling
+    const sf = levelData.secondFloor;
+    const g = ENGINE.levelGroup;
+    for (let xz = -0.5; xz <= 0.5; xz += 1.0) {
+      for (let zz = -0.5; zz <= 0.5; zz += 1.0) {
+        const l = new THREE.Mesh(new THREE.CircleGeometry(0.1, 6), new THREE.MeshStandardMaterial({
+          color: 0xffeedd, emissive: 0x885533, emissiveIntensity: 0.08
+        }));
+        l.position.set(sf.x + xz * sf.w * 0.35, sf.y + levelData.room.h - sf.y - 0.02, sf.z + zz * sf.d * 0.35);
+        l.rotation.x = -Math.PI / 2;
+        g.add(l);
+      }
+    }
+  }
+  if (levelData.stairs) {
+    LEVELS.addStairs(levelData.stairs);
+  }
+
   // Furniture
   (levelData.shelves || []).forEach(s => LEVELS.addShelf(s.x, s.z, s.w || 0.8, s.d || 0.4));
   (levelData.tables || []).forEach(t => LEVELS.addTable(t.x, t.z, t.w || 0.6, t.d || 0.4));
   (levelData.lockers || []).forEach(l => LEVELS.addLocker(l.x, l.z, l.w || 0.5, l.d || 0.4));
   (levelData.benches || []).forEach(b => LEVELS.addBench(b.x, b.z, b.w || 1.2));
+  (levelData.shelfPairs || []).forEach(s => LEVELS.addShelfPair(s.x, s.z, s.w || 0.8, s.d || 0.4, s.spacing));
+  (levelData.chairs || []).forEach(c => LEVELS.addChair(c.x, c.z, c.rotY || 0));
+  (levelData.computerDesks || []).forEach(cd => LEVELS.addComputerDesk(cd.x, cd.z, cd.dir || 0));
+  (levelData.sofas || []).forEach(s => LEVELS.addSofa(s.x, s.z, s.w || 1.2));
+
+  // Second-floor furniture (placed at second floor Y)
+  const f2y = levelData.secondFloor ? levelData.secondFloor.y : 0;
+  (levelData.floor2Shelves || []).forEach(s => {
+    LEVELS.addShelf(s.x, s.z, s.w || 0.8, s.d || 0.4, f2y);
+  });
+  (levelData.floor2Tables || []).forEach(t => LEVELS.addTable(t.x, t.z, t.w || 0.6, t.d || 0.4, f2y));
+  (levelData.floor2Chairs || []).forEach(c => LEVELS.addChair(c.x, c.z, c.rotY || 0, f2y));
 
   // Items
   if (levelData.flashlightPos) LEVELS.addFlashlight(levelData.flashlightPos.x, levelData.flashlightPos.z);
-  if (levelData.keyPos) LEVELS.addKey(levelData.keyPos.x, levelData.keyPos.z);
+  if (levelData.keyPos) LEVELS.addKey(levelData.keyPos.x, levelData.keyPos.z, levelData.keyPos.y);
+
+  // Padlock on exit door
+  if (levelData.padlock !== false && ENGINE.exitDoor) {
+    const dp = ENGINE.exitDoor.position;
+    LEVELS.addPadlock(new THREE.Vector3(dp.x, dp.y, dp.z));
+    if (window.showPrompt) window.showPrompt('Намери ключа, за да отключиш <span>🔒</span>');
+  }
 
   // Player
   if (ENGINE.createPlayer) {
