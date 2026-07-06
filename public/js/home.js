@@ -1065,23 +1065,28 @@ function trackPresence() {
     }
   }, 45000);
 
-  // Маркиране като офлайн при излизане
-  window.addEventListener('beforeunload', () => {
-    db.collection('users').doc(currentUser.uid).update({
-      online: false
-    });
-  });
-
   // Слушане за потребители онлайн в реално време
+  // Използва lastActive, за да филтрира остарели записи (напр. при убит таб на мобилно)
   db.collection('users')
     .where('online', '==', true)
     .onSnapshot((snap) => {
       const container = document.getElementById('onlineUsers');
       if (!container) return;
-      container.innerHTML = `<span class="online-count">${snap.size} потребители онлайн</span>`;
 
+      const now = firebase.firestore.Timestamp.now();
+      const cutoff = now.seconds - 120; // 2 минути
+
+      const activeUsers = [];
       snap.forEach(doc => {
         const u = doc.data();
+        if (u.lastActive && u.lastActive.seconds >= cutoff) {
+          activeUsers.push(u);
+        }
+      });
+
+      container.innerHTML = `<span class="online-count">${activeUsers.length} потребители онлайн</span>`;
+
+      activeUsers.forEach(u => {
         const userDiv = document.createElement('div');
         userDiv.className = 'online-user-item';
         userDiv.style.display = 'flex';
