@@ -221,7 +221,7 @@
       }
 
       try {
-        const doc = await db.collection(GAME_PATH).doc('users').doc(user.uid).get();
+        const doc = await db.doc(GAME_PATH + '/users/' + user.uid).get();
 
         if (doc.exists) {
           const data = doc.data();
@@ -286,7 +286,7 @@
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Регистриране...';
 
             try {
-              await db.collection(GAME_PATH).doc('users').doc(user.uid).set({
+              await db.doc(GAME_PATH + '/users/' + user.uid).set({
                 email: user.email,
                 roblox_username: roblox_username
               });
