@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="bg" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Бягай от Коце Кисьов - Виево банда</title>
+  <link rel="stylesheet" href="../../css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body {
+      background: linear-gradient(135deg, #0a0a0f 0%, #1a0a0a 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+
+    .game-card {
+      background: var(--bg-card);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 2.5rem;
+      width: 100%;
+      max-width: 480px;
+      box-shadow: 0 8px 48px var(--shadow);
+      text-align: center;
+    }
+
+    .game-icon {
+      font-size: 3rem;
+      color: var(--danger);
+      margin-bottom: 0.5rem;
+    }
+
+    .game-title {
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: var(--text-primary);
+      margin-bottom: 0.25rem;
+    }
+
+    .game-subtitle {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      margin-bottom: 2rem;
+    }
+
+    .status-box {
+      padding: 1.5rem;
+      border-radius: var(--radius);
+      margin-bottom: 1.5rem;
+    }
+
+    .status-box.registered {
+      background: rgba(46, 160, 67, 0.08);
+      border: 1px solid rgba(46, 160, 67, 0.2);
+    }
+
+    .status-box.registered .status-icon {
+      color: var(--accent);
+      font-size: 2rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .status-box.registered .username-display {
+      font-size: 1.1rem;
+      color: var(--accent);
+      font-weight: 700;
+      margin: 0.5rem 0;
+      padding: 0.5rem;
+      background: rgba(46, 160, 67, 0.1);
+      border-radius: var(--radius-sm);
+    }
+
+    .status-box.registered .help-text {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-top: 1rem;
+      line-height: 1.6;
+    }
+
+    .status-box.new {
+      background: rgba(88, 166, 255, 0.05);
+      border: 1px solid rgba(88, 166, 255, 0.15);
+    }
+
+    .status-box.new .status-icon {
+      color: var(--accent-blue);
+      font-size: 1.8rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .status-box.new p {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      margin-bottom: 1.5rem;
+      line-height: 1.5;
+    }
+
+    .loading-spinner {
+      display: inline-block;
+      width: 36px;
+      height: 36px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .form-group {
+      text-align: left;
+    }
+
+    .form-group label i {
+      margin-right: 0.35rem;
+      color: var(--accent-blue);
+    }
+
+    .input-with-icon {
+      position: relative;
+    }
+
+    .input-with-icon input {
+      padding-left: 2.4rem;
+    }
+
+    .input-with-icon .input-icon {
+      position: absolute;
+      left: 0.85rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      font-size: 1rem;
+    }
+
+    .btn-submit {
+      width: 100%;
+      padding: 0.8rem;
+      font-size: 1rem;
+    }
+
+    .btn-submit:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .back-link {
+      display: inline-block;
+      margin-top: 1.5rem;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      transition: color var(--transition);
+    }
+
+    .back-link:hover {
+      color: var(--text-secondary);
+    }
+
+    .success-msg, .error-msg {
+      margin-top: 0.75rem;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="game-card">
+    <div class="game-icon"><i class="fas fa-running"></i></div>
+    <div class="game-title">Бягай от Коце Кисьов</div>
+    <div class="game-subtitle">Въведи своя Roblox потребител, за да играеш</div>
+
+    <div id="contentArea">
+      <div style="padding: 2rem 0;">
+        <div class="loading-spinner"></div>
+        <p style="color: var(--text-muted); margin-top: 1rem; font-size: 0.9rem;">Зареждане...</p>
+      </div>
+    </div>
+
+    <a href="/games/" class="back-link"><i class="fas fa-arrow-left"></i> Назад към игрите</a>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCa6TTfSKudSpG5N07wOnmyRMrF6BzNb-s",
+      authDomain: "vievo-community-zzz.firebaseapp.com",
+      projectId: "vievo-community-zzz",
+      storageBucket: "vievo-community-zzz.firebasestorage.app",
+      messagingSenderId: "52906238804",
+      appId: "1:52906238804:web:2c466dc92fb9fc7539dec1"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    const GAME_PATH = 'games/byagai-ot-koce-kisyov';
+
+    auth.onAuthStateChanged(async (user) => {
+      const area = document.getElementById('contentArea');
+
+      if (!user) {
+        area.innerHTML = `
+          <div class="status-box new">
+            <div class="status-icon"><i class="fas fa-exclamation-triangle"></i></div>
+            <p>Трябва да си <strong>влезеш в профила</strong> си, за да играеш.</p>
+            <a href="/login/" class="btn btn-primary" style="text-decoration: none;">
+              <i class="fas fa-sign-in-alt"></i> Вход
+            </a>
+          </div>
+        `;
+        return;
+      }
+
+      try {
+        const doc = await db.collection(GAME_PATH).doc('users').doc(user.uid).get();
+
+        if (doc.exists) {
+          const data = doc.data();
+          area.innerHTML = `
+            <div class="status-box registered">
+              <div class="status-icon"><i class="fas fa-check-circle"></i></div>
+              <p style="color: var(--text-secondary); font-size: 0.9rem;">Вече си регистриран с Roblox потребител:</p>
+              <div class="username-display">
+                <i class="fab fa-roblox" style="margin-right: 0.4rem;"></i>${escapeHtml(data.roblox_username)}
+              </div>
+              <div class="help-text">
+                <i class="fas fa-info-circle"></i> Ако искаш да промениш потребителското си име,<br>
+                свържи се с <strong>администратор</strong> или <strong>собственик</strong> чрез чата.
+              </div>
+            </div>
+          `;
+        } else {
+          area.innerHTML = `
+            <div class="status-box new">
+              <div class="status-icon"><i class="fas fa-user-plus"></i></div>
+              <p>Въведи своето <strong>Roblox потребителско име</strong>, за да започнеш.<br>
+              <span style="font-size: 0.8rem; color: var(--text-muted);">Това може да се промени само от администратор.</span></p>
+              <form id="registerForm">
+                <div class="form-group">
+                  <label><i class="fab fa-roblox"></i> Roblox потребител</label>
+                  <div class="input-with-icon">
+                    <span class="input-icon"><i class="fas fa-user"></i></span>
+                    <input type="text" id="robloxInput" placeholder="Напр. KoceKisyov123" required
+                      minlength="3" maxlength="30"
+                      pattern="^[a-zA-Z0-9_]+$"
+                      title="Само латински букви, цифри и _">
+                  </div>
+                </div>
+                <button type="submit" class="btn btn-primary btn-submit" id="submitBtn">
+                  <i class="fas fa-check"></i> Регистрация
+                </button>
+                <div id="formMsg"></div>
+              </form>
+            </div>
+          `;
+
+          const form = document.getElementById('registerForm');
+          const input = document.getElementById('robloxInput');
+          const submitBtn = document.getElementById('submitBtn');
+          const formMsg = document.getElementById('formMsg');
+
+          form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const roblox_username = input.value.trim();
+
+            if (!roblox_username) {
+              showMsg('Моля, въведи Roblox потребителско име.', 'error');
+              return;
+            }
+
+            if (!/^[a-zA-Z0-9_]+$/.test(roblox_username)) {
+              showMsg('Само латински букви, цифри и _ са позволени.', 'error');
+              return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Регистриране...';
+
+            try {
+              await db.collection(GAME_PATH).doc('users').doc(user.uid).set({
+                email: user.email,
+                roblox_username: roblox_username
+              });
+
+              showMsg('✅ Успешна регистрация!', 'success');
+              submitBtn.innerHTML = '<i class="fas fa-check"></i> Регистриран';
+
+              setTimeout(() => {
+                location.reload();
+              }, 1500);
+            } catch (err) {
+              console.error('Registration error:', err);
+              showMsg('Грешка: ' + err.message, 'error');
+              submitBtn.disabled = false;
+              submitBtn.innerHTML = '<i class="fas fa-check"></i> Регистрация';
+            }
+          });
+
+          function showMsg(text, type) {
+            formMsg.className = type === 'error' ? 'error-msg' : 'success-msg';
+            formMsg.textContent = text;
+          }
+        }
+      } catch (err) {
+        console.error('Firestore error:', err);
+        area.innerHTML = `
+          <div class="status-box new">
+            <div class="status-icon" style="color: var(--danger);"><i class="fas fa-exclamation-circle"></i></div>
+            <p style="color: var(--danger);">Грешка при зареждане. Опитай отново.</p>
+            <button class="btn btn-secondary btn-sm" onclick="location.reload()" style="margin-top: 0.5rem;">
+              <i class="fas fa-redo"></i> Опитай отново
+            </button>
+          </div>
+        `;
+      }
+    });
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+  </script>
+</body>
+</html>

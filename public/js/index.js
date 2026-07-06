@@ -18,7 +18,7 @@ auth.onAuthStateChanged((user) => {
         const data = doc.data();
 
         // Ограничаване на достъпа до игрите в етап на разработка
-        if (window.location.pathname.includes('/games/')) {
+        if (window.location.pathname.includes('/games/') && !window.location.pathname.includes('/games/byagai-ot-koce-kisyov/')) {
           if (data.role !== 'admin' && data.role !== 'owner') {
             alert('Достъпът до игрите в момента е ограничен само за администратори!');
             window.location.href = '/home/';

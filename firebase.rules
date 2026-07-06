@@ -13,9 +13,9 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(uid)).data.role;
     }
 
-    // Helper: check if user is approved
-    function isApproved(uid) {
-      return get(/databases/$(database)/documents/users/$(uid)).data.approved == true;
+    // Helper: check if user is not banned
+    function isNotBanned(uid) {
+      return get(/databases/$(database)/documents/users/$(uid)).data.banned != true;
     }
 
     // Users collection
@@ -32,7 +32,6 @@ service cloud.firestore {
       // Users can update their own non-sensitive fields
       allow update: if isAuth() && request.auth.uid == userId
         && (!("role" in request.resource.data) || request.resource.data.role == get(/databases/$(database)/documents/users/$(userId)).data.role)
-        && (!("approved" in request.resource.data) || request.resource.data.approved == get(/databases/$(database)/documents/users/$(userId)).data.approved)
         && (!("banned" in request.resource.data) || request.resource.data.banned == get(/databases/$(database)/documents/users/$(userId)).data.banned);
 
       // Admins and owners can update any user
@@ -41,18 +40,6 @@ service cloud.firestore {
 
       // Only owner can delete users
       allow delete: if isAuth() && getUserRole(request.auth.uid) == 'owner';
-
-      // Inventory subcollection
-      match /inventory/{itemId} {
-        allow read: if isAuth();
-        allow create, update, delete: if isAuth() && (request.auth.uid == userId || getUserRole(request.auth.uid) == 'admin' || getUserRole(request.auth.uid) == 'owner');
-      }
-
-      // Daily quests subcollection
-      match /daily_quests/{questId} {
-        allow read: if isAuth();
-        allow create, update, delete: if isAuth() && (request.auth.uid == userId || getUserRole(request.auth.uid) == 'admin' || getUserRole(request.auth.uid) == 'owner');
-      }
     }
 
     // News collection
@@ -67,7 +54,7 @@ service cloud.firestore {
     // Forum collection
     match /forum/{threadId} {
       allow read: if isAuth();
-      allow create: if isAuth() && isApproved(request.auth.uid);
+      allow create: if isAuth() && isNotBanned(request.auth.uid);
       allow update: if isAuth()
         && (request.auth.uid == resource.data.authorId
           || getUserRole(request.auth.uid) == 'admin'
@@ -81,7 +68,7 @@ service cloud.firestore {
     // Forum replies (subcollection)
     match /forum/{threadId}/replies/{replyId} {
       allow read: if isAuth();
-      allow create: if isAuth() && isApproved(request.auth.uid);
+      allow create: if isAuth() && isNotBanned(request.auth.uid);
       allow delete: if isAuth()
         && (request.auth.uid == resource.data.authorId
           || getUserRole(request.auth.uid) == 'admin'
@@ -91,7 +78,7 @@ service cloud.firestore {
     // Chat collection
     match /chat/{messageId} {
       allow read: if isAuth();
-      allow create: if isAuth() && isApproved(request.auth.uid)
+      allow create: if isAuth() && isNotBanned(request.auth.uid)
         && request.resource.data.userId == request.auth.uid;
       allow delete: if isAuth()
         && (getUserRole(request.auth.uid) == 'admin'
@@ -130,40 +117,18 @@ service cloud.firestore {
       }
     }
 
-    // Games collection and hierarchy
+    // Games collection — per-game user records
     match /games/{gameId} {
       allow read: if isAuth();
       allow create, update, delete: if isAuth() && (getUserRole(request.auth.uid) == 'admin' || getUserRole(request.auth.uid) == 'owner');
 
-      // Game users (e.g. games/byagai-ot-koce-kisyov/users/{uid})
       match /users/{userId} {
         allow read: if isAuth();
-        allow create: if isAuth() && request.auth.uid == userId;
-        allow update: if isAuth() && request.auth.uid == userId
-          && (!("role" in request.resource.data) || request.resource.data.role == resource.data.role);
+        allow create: if isAuth() && request.auth.uid == userId
+          && request.resource.data.email is string
+          && request.resource.data.roblox_username is string;
+        allow update: if isAuth() && request.auth.uid == userId;
         allow delete: if false;
-      }
-
-      // Shop subcollection — supports nested categories: games/{gameId}/shop/{category}/items/{itemId}
-      match /shop/{category} {
-        allow read: if isAuth();
-        allow create, update, delete: if isAuth()
-          && (getUserRole(request.auth.uid) == 'admin' || getUserRole(request.auth.uid) == 'owner');
-
-        match /items/{itemId} {
-          allow read: if isAuth();
-          allow create, update, delete: if isAuth()
-            && (getUserRole(request.auth.uid) == 'admin' || getUserRole(request.auth.uid) == 'owner');
-        }
-      }
-
-      // Leaderboard subcollection
-      match /leaderboard/{scoreId} {
-        allow read: if isAuth();
-        allow create: if isAuth() && request.resource.data.user_id == request.auth.uid;
-        allow update: if isAuth() && request.resource.data.user_id == request.auth.uid
-          && request.resource.data.score > resource.data.score;
-        allow delete: if isAuth() && (getUserRole(request.auth.uid) == 'admin' || getUserRole(request.auth.uid) == 'owner');
       }
     }
 
