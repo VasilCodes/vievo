@@ -130,6 +130,24 @@ service cloud.firestore {
         allow update: if isAuth() && request.auth.uid == userId;
         allow delete: if false;
       }
+
+      // Shop items
+      match /shop/{itemId} {
+        allow read: if isAuth();
+        allow create, update, delete: if isAuth()
+          && (getUserRole(request.auth.uid) == 'admin' || getUserRole(request.auth.uid) == 'owner');
+      }
+
+      // Purchases
+      match /purchases/{purchaseId} {
+        allow read: if isAuth();
+        allow create: if isAuth();
+        allow update: if isAuth()
+          && (resource.data.userId == request.auth.uid
+            || getUserRole(request.auth.uid) == 'admin'
+            || getUserRole(request.auth.uid) == 'owner');
+        allow delete: if false;
+      }
     }
 
     // Deny everything else

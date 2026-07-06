@@ -28,6 +28,7 @@
       <a href="#admin-ads" class="admin-nav-item" data-tab="ads"><span class="nav-icon"><i class="fas fa-bullhorn"></i></span> Реклами</a>
       <a href="#admin-subscriptions" class="admin-nav-item" data-tab="subscriptions"><span class="nav-icon"><i class="fas fa-gem"></i></span> Абонаменти</a>
       <a href="#admin-events" class="admin-nav-item" data-tab="events"><span class="nav-icon"><i class="fas fa-calendar-alt"></i></span> Събития</a>
+      <a href="#admin-games" class="admin-nav-item" data-tab="games"><span class="nav-icon"><i class="fas fa-gamepad"></i></span> Игри</a>
     </aside>
 
     <main class="admin-content">
@@ -125,6 +126,54 @@
           <p id="eventStatus" class="status-msg"></p>
         </div>
         <div id="eventsList" class="admin-list"></div>
+      </div>
+      <div id="admin-games" class="admin-tab">
+        <h2>Игри — Магазин</h2>
+
+        <div class="admin-form" style="margin-bottom:0.5rem">
+          <label style="font-size:0.85rem;color:var(--text-secondary);font-weight:500">Избери игра</label>
+          <select id="gameSelector" style="margin-bottom:1rem">
+            <option value="byagai-ot-koce-kisyov">Бягай от Коце Кисьов</option>
+          </select>
+        </div>
+
+        <h3 style="margin-top:0">Добави предмет</h3>
+        <div class="admin-form">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem">
+            <input type="text" id="shopName" placeholder="Име на предмета">
+            <input type="text" id="shopPrice" placeholder="Цена (напр. 50)">
+            <input type="text" id="shopRobuxAsset" placeholder="Roblox Asset ID (ако има)">
+            <select id="shopRarity">
+              <option value="common">Common</option>
+              <option value="uncommon">Uncommon</option>
+              <option value="rare">Rare</option>
+              <option value="epic">Epic</option>
+              <option value="legendary">Legendary</option>
+            </select>
+            <input type="text" id="shopImage" placeholder="URL на изображение">
+            <input type="text" id="shopAssetId" placeholder="Asset ID за покупка">
+            <input type="number" id="shopRotationSlot" placeholder="Ротационен слот (1-8)" min="1" max="8">
+          </div>
+          <textarea id="shopDescription" placeholder="Описание..." style="margin-top:0.75rem"></textarea>
+          <div style="display:flex;align-items:center;gap:0.5rem;margin-top:0.75rem">
+            <input type="checkbox" id="shopInRotation" style="width:auto">
+            <label for="shopInRotation" style="margin:0">В ротация</label>
+          </div>
+          <div class="form-actions" style="margin-top:0.75rem">
+            <button class="btn btn-primary" id="addShopItemBtn">Добави предмет</button>
+          </div>
+          <p id="shopStatus" class="status-msg"></p>
+        </div>
+
+        <h3 style="margin-top:1.5rem">Предмети в магазина</h3>
+        <div id="shopItemsList" class="admin-list">
+          <p style="color:var(--text-muted)">Зареждане...</p>
+        </div>
+
+        <h3 style="margin-top:1.5rem">Покупки</h3>
+        <div id="shopPurchasesList" class="admin-list">
+          <p style="color:var(--text-muted)">Зареждане...</p>
+        </div>
       </div>
     </main>
   </div>
@@ -225,6 +274,63 @@
       </div>
       <p id="editEventStatus" class="status-msg"></p>
       <button class="btn btn-primary" onclick="saveEditEvent()">Запази</button>
+    </div>
+  </div>
+
+  <!-- Edit Shop Item Modal -->
+  <div class="modal-overlay" id="editShopItemModal">
+    <div class="modal" style="position:relative">
+      <div class="modal-header">
+        <h2>Редактирай предмет</h2>
+        <button class="modal-close" onclick="closeModal('editShopItemModal')">&times;</button>
+      </div>
+      <input type="hidden" id="editShopItemId">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem">
+        <div class="form-group">
+          <label>Име</label>
+          <input type="text" id="editShopName">
+        </div>
+        <div class="form-group">
+          <label>Цена</label>
+          <input type="text" id="editShopPrice">
+        </div>
+        <div class="form-group">
+          <label>Roblox Asset ID</label>
+          <input type="text" id="editShopRobuxAsset">
+        </div>
+        <div class="form-group">
+          <label>Рядкост</label>
+          <select id="editShopRarity">
+            <option value="common">Common</option>
+            <option value="uncommon">Uncommon</option>
+            <option value="rare">Rare</option>
+            <option value="epic">Epic</option>
+            <option value="legendary">Legendary</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Изображение (URL)</label>
+          <input type="text" id="editShopImage">
+        </div>
+        <div class="form-group">
+          <label>Asset ID за покупка</label>
+          <input type="text" id="editShopAssetId">
+        </div>
+        <div class="form-group">
+          <label>Ротационен слот (1-8)</label>
+          <input type="number" id="editShopRotationSlot" min="1" max="8">
+        </div>
+      </div>
+      <div class="form-group" style="margin-top:0.75rem">
+        <label>Описание</label>
+        <textarea id="editShopDescription"></textarea>
+      </div>
+      <div style="display:flex;align-items:center;gap:0.5rem;margin-top:0.5rem">
+        <input type="checkbox" id="editShopInRotation" style="width:auto">
+        <label for="editShopInRotation" style="margin:0">В ротация</label>
+      </div>
+      <p id="editShopStatus" class="status-msg"></p>
+      <button class="btn btn-primary" onclick="saveEditShopItem()" style="margin-top:0.75rem">Запази промените</button>
     </div>
   </div>
 

@@ -29,7 +29,7 @@ auth.onAuthStateChanged(async (user) => {
 
 function initAdmin() {
   loadStats(); loadUsers(); loadNews(); loadPendingApprovals();
-  loadAds(); loadSubscriptions(); loadEvents();
+  loadAds(); loadSubscriptions(); loadEvents(); loadGameShop();
   setupAdminListeners(); setupTabNavigation();
 }
 
@@ -431,6 +431,12 @@ function setupAdminListeners() {
     } catch (err) { status.textContent = 'Грешка: ' + err.message; status.style.color = 'var(--danger)'; }
   });
 
+  document.getElementById('addShopItemBtn').addEventListener('click', addShopItem);
+
+  document.getElementById('gameSelector').addEventListener('change', () => {
+    loadGameShop();
+  });
+
   document.getElementById('addEventBtn').addEventListener('click', async () => {
     const title = document.getElementById('eventTitle').value.trim();
     const date = document.getElementById('eventDate').value;
@@ -452,3 +458,216 @@ function setupAdminListeners() {
     } catch (err) { status.textContent = 'Грешка: ' + err.message; status.style.color = 'var(--danger)'; }
   });
 }
+
+/* ===== Games — Shop Management ===== */
+
+function getGameId() {
+  return document.getElementById('gameSelector').value;
+}
+
+function getShopRef() {
+  return db.collection('games').doc(getGameId()).collection('shop');
+}
+
+async function loadGameShop() {
+  loadShopItems();
+  loadShopPurchases();
+}
+
+async function loadShopItems() {
+  const container = document.getElementById('shopItemsList');
+  try {
+    const snap = await getShopRef().orderBy('createdAt', 'desc').get();
+    container.innerHTML = '';
+    if (snap.empty) {
+      container.innerHTML = '<p style="color:var(--text-muted)">Все още няма предмети.</p>';
+      return;
+    }
+    snap.forEach(doc => {
+      if (doc.id === 'purchases') return;
+      const item = doc.data();
+      const div = document.createElement('div');
+      div.className = 'admin-list-item';
+      const rarityColors = { common: '#8b949e', uncommon: '#58a6ff', rare: '#d29922', epic: '#bc8cff', legendary: '#ff6b6b' };
+      div.innerHTML = `
+        <div class="item-info">
+          <strong>${item.name || 'Без име'}</strong>
+          <span class="badge" style="background:${rarityColors[item.rarity] || '#8b949e'};margin-left:0.5rem;font-size:0.7rem">${item.rarity || 'common'}</span>
+          <span class="badge" style="background:var(--warning);margin-left:0.3rem;font-size:0.7rem">${item.price || '0'}</span>
+          <div style="font-size:0.82rem;color:var(--text-muted);margin-top:0.25rem">
+            ${item.description || ''}
+            ${item.robuxAsset ? ' • Roblox Asset: ' + item.robuxAsset : ''}
+            ${item.assetId ? ' • AssetID: ' + item.assetId : ''}
+          </div>
+          <div style="font-size:0.78rem;color:var(--text-muted);margin-top:0.15rem">
+            Слот: ${item.rotationSlot || '-'}
+            ${item.inRotation ? '<span style="color:var(--accent)"> • В ротация</span>' : ''}
+          </div>
+        </div>
+        <div class="item-actions">
+          <button class="btn btn-small btn-ghost" onclick="openEditShopItem('${doc.id}')">Редактирай</button>
+          <button class="btn btn-small btn-danger" onclick="deleteShopItem('${doc.id}')">Изтрий</button>
+        </div>
+      `;
+      container.appendChild(div);
+    });
+  } catch (err) {
+    container.innerHTML = '<p style="color:var(--danger)">Грешка при зареждане: ' + err.message + '</p>';
+    console.error(err);
+  }
+}
+
+async function loadShopPurchases() {
+  const container = document.getElementById('shopPurchasesList');
+  try {
+    const snap = await db.collection('games').doc(getGameId()).collection('purchases').orderBy('purchasedAt', 'desc').limit(50).get();
+    container.innerHTML = '';
+    if (snap.empty) {
+      container.innerHTML = '<p style="color:var(--text-muted)">Все още няма покупки.</p>';
+      return;
+    }
+    snap.forEach(doc => {
+      const p = doc.data();
+      const div = document.createElement('div');
+      div.className = 'admin-list-item';
+      const time = p.purchasedAt ? new Date(p.purchasedAt.toMillis()).toLocaleString('bg-BG') : '';
+      div.innerHTML = `
+        <div class="item-info">
+          <strong>${p.itemName || 'Неизвестен'}</strong>
+          <div style="font-size:0.82rem;color:var(--text-muted)">
+            Потребител: ${p.userId}
+            ${p.currency ? ' • ' + p.price + ' ' + p.currency : ''}
+            ${time ? ' • ' + time : ''}
+          </div>
+          <div style="font-size:0.78rem;color:var(--text-muted)">
+            Статус: ${p.status || 'pending'}
+            ${p.itemId ? ' • ItemID: ' + p.itemId : ''}
+          </div>
+        </div>
+      `;
+      container.appendChild(div);
+    });
+  } catch (err) {
+    container.innerHTML = '<p style="color:var(--text-muted)">Грешка при зареждане на покупките.</p>';
+    console.error(err);
+  }
+}
+
+async function addShopItem() {
+  const status = document.getElementById('shopStatus');
+  const name = document.getElementById('shopName').value.trim();
+  const description = document.getElementById('shopDescription').value.trim();
+  const price = document.getElementById('shopPrice').value.trim();
+  const robuxAsset = document.getElementById('shopRobuxAsset').value.trim();
+  const rarity = document.getElementById('shopRarity').value;
+  const image = document.getElementById('shopImage').value.trim();
+  const assetId = document.getElementById('shopAssetId').value.trim();
+  const rotationSlot = parseInt(document.getElementById('shopRotationSlot').value) || null;
+  const inRotation = document.getElementById('shopInRotation').checked;
+
+  if (!name) { status.textContent = 'Името е задължително.'; status.style.color = 'var(--danger)'; return; }
+  if (!price) { status.textContent = 'Цената е задължителна.'; status.style.color = 'var(--danger)'; return; }
+
+  try {
+    await getShopRef().add({
+      name,
+      description,
+      price,
+      robuxAsset,
+      rarity,
+      image,
+      assetId,
+      rotationSlot,
+      inRotation,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    status.textContent = 'Предметът е добавен!';
+    status.style.color = 'var(--accent)';
+    document.getElementById('shopName').value = '';
+    document.getElementById('shopDescription').value = '';
+    document.getElementById('shopPrice').value = '';
+    document.getElementById('shopRobuxAsset').value = '';
+    document.getElementById('shopImage').value = '';
+    document.getElementById('shopAssetId').value = '';
+    document.getElementById('shopRotationSlot').value = '';
+    document.getElementById('shopInRotation').checked = false;
+    loadShopItems();
+  } catch (err) {
+    status.textContent = 'Грешка: ' + err.message;
+    status.style.color = 'var(--danger)';
+    console.error(err);
+  }
+}
+
+window.openEditShopItem = async (id) => {
+  try {
+    const doc = await getShopRef().doc(id).get();
+    if (!doc.exists) return;
+    const item = doc.data();
+    document.getElementById('editShopItemId').value = id;
+    document.getElementById('editShopName').value = item.name || '';
+    document.getElementById('editShopDescription').value = item.description || '';
+    document.getElementById('editShopPrice').value = item.price || '';
+    document.getElementById('editShopRobuxAsset').value = item.robuxAsset || '';
+    document.getElementById('editShopRarity').value = item.rarity || 'common';
+    document.getElementById('editShopImage').value = item.image || '';
+    document.getElementById('editShopAssetId').value = item.assetId || '';
+    document.getElementById('editShopRotationSlot').value = item.rotationSlot || '';
+    document.getElementById('editShopInRotation').checked = !!item.inRotation;
+    document.getElementById('editShopStatus').textContent = '';
+    document.getElementById('editShopItemModal').classList.add('show');
+  } catch (err) {
+    console.error(err);
+  }
+};
+
+window.saveEditShopItem = async () => {
+  const id = document.getElementById('editShopItemId').value;
+  const status = document.getElementById('editShopStatus');
+  if (!id) return;
+
+  const name = document.getElementById('editShopName').value.trim();
+  const description = document.getElementById('editShopDescription').value.trim();
+  const price = document.getElementById('editShopPrice').value.trim();
+  const robuxAsset = document.getElementById('editShopRobuxAsset').value.trim();
+  const rarity = document.getElementById('editShopRarity').value;
+  const image = document.getElementById('editShopImage').value.trim();
+  const assetId = document.getElementById('editShopAssetId').value.trim();
+  const rotationSlot = parseInt(document.getElementById('editShopRotationSlot').value) || null;
+  const inRotation = document.getElementById('editShopInRotation').checked;
+
+  if (!name) { status.textContent = 'Името е задължително.'; status.style.color = 'var(--danger)'; return; }
+  if (!price) { status.textContent = 'Цената е задължителна.'; status.style.color = 'var(--danger)'; return; }
+
+  try {
+    await getShopRef().doc(id).update({
+      name,
+      description,
+      price,
+      robuxAsset,
+      rarity,
+      image,
+      assetId,
+      rotationSlot,
+      inRotation
+    });
+    status.textContent = 'Запазено!';
+    status.style.color = 'var(--accent)';
+    document.getElementById('editShopItemModal').classList.remove('show');
+    loadShopItems();
+  } catch (err) {
+    status.textContent = 'Грешка: ' + err.message;
+    status.style.color = 'var(--danger)';
+    console.error(err);
+  }
+};
+
+window.deleteShopItem = async (id) => {
+  if (!confirm('Сигурен ли си, че искаш да изтриеш този предмет?')) return;
+  try {
+    await getShopRef().doc(id).delete();
+    loadShopItems();
+  } catch (err) {
+    console.error(err);
+  }
+};
